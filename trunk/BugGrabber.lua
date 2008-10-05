@@ -542,6 +542,17 @@ function BugGrabber:Resume()
 	totalElapsed = 0
 end
 
+local function createSwatter()
+	-- Need this so Stubby will feed us errors instead of just
+	-- dumping them to the chat frame.
+	_G.Swatter = {
+		IsEnabled = function() return true end,
+		OnError = function(msg, frame, stack, etype, ...)
+			grabError(tostring(msg) .. tostring(stack))
+		end,
+	}
+end
+
 local function addonLoaded(addon)
 	if addon == "!BugGrabber" then
 		real_seterrorhandler(grabError)
@@ -584,14 +595,7 @@ local function addonLoaded(addon)
 			end
 		end
 	elseif addon == "Stubby" then
-		-- Need this so Stubby will feed us errors instead of just
-		-- dumping them to the chat frame.
-		_G.Swatter = {
-			IsEnabled = function() return true end,
-			OnError = function(msg, frame, stack, etype, ...)
-				grabError(tostring(msg) .. tostring(stack))
-			end,
-		}
+		createSwatter()
 	end
 end
 
@@ -603,6 +607,9 @@ frame:SetScript("OnEvent", function(self, event, arg1, arg2)
 		addonLoaded(arg1)
 	elseif event == "PLAYER_LOGIN" then
 		real_seterrorhandler(grabError)
+		if IsAddOnLoaded("Stubby") and type(_G.Swatter) ~= "table" then
+			createSwatter()
+		end
 	end
 end)
 frame:RegisterEvent("ADDON_LOADED")
