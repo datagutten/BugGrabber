@@ -111,9 +111,21 @@ local stateErrorDatabase = {}
 local slashCmdCreated = nil
 local slashCmdErrorList = {}
 
+local isBugGrabbedRegistered = false
+local callbacks = nil
 local ae2 = nil
 -- TODO Should add rock and ace3
 local function triggerEvent(...)
+	if not callbacks and LibStub and LibStub("CallbackHandler-1.0", true) then
+		callbacks = LibStub("CallbackHandler-1.0"):New(BugGrabber)
+		function callbacks:OnUsed(target, eventname)
+			if eventname == "BugGrabber_BugGrabbed" then isBugGrabbedRegistered = true end
+		end
+		function callbacks:OnUnused(target, eventname)
+			if eventname == "BugGrabber_BugGrabbed" then isBugGrabbedRegistered = false end
+		end
+	end
+	if callbacks then callbacks:Fire(...) end
 	if not ae2 and AceLibrary and AceLibrary:HasInstance("AceEvent-2.0") then
 		ae2 = AceLibrary("AceEvent-2.0")
 	end
@@ -163,7 +175,7 @@ local function createSlashCmd()
 	_G["SLASH_"..name.."1"] = "/buggrabber"
 
 	slashCmdCreated = true
-	if not ae2 or (ae2 and not ae2:IsEventRegistered("BugGrabber_BugGrabbed")) then
+	if not isBugGrabbedRegistered and (not ae2 or (ae2 and not ae2:IsEventRegistered("BugGrabber_BugGrabbed"))) then
 		print(CMD_CREATED)
 	end
 end
