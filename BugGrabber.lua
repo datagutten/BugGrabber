@@ -116,7 +116,7 @@ local callbacks = nil
 local ae2 = nil
 -- TODO Should add rock and ace3
 local function triggerEvent(...)
-	if not callbacks and LibStub and LibStub("CallbackHandler-1.0", true) then
+	if not callbacks then
 		callbacks = LibStub("CallbackHandler-1.0"):New(BugGrabber)
 		function callbacks:OnUsed(target, eventname)
 			if eventname == "BugGrabber_BugGrabbed" then isBugGrabbedRegistered = true end
