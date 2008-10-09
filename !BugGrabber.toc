@@ -9,8 +9,6 @@
 ## X-Credits: Rowne, Ramble, kergoth, ckknight, Fritti
 ## X-License: GPL v2 or later.
 ## X-Category: Development Tools
-## X-RelSite-WoWI: 5995
-## X-AceForum: 1769
 ## X-Email: rabbit.magtheridon@gmail.com
 ## SavedVariables: BugGrabberDB
 
