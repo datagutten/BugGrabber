@@ -1,6 +1,5 @@
 ﻿## Interface: 30000
 ## Title: BugGrabber
-## Title-koKR: |CFF99FF99B|CFFFFFFFFug|CFF99FF99G|CFFFFFFFFrabber
 ## Version: 2.2
 ## Notes: Grabs bugs for the bug sack.
 ## Notes-zhTW: 搜集錯誤訊息提供 BugSack 顯示。
