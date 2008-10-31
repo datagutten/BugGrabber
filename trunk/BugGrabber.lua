@@ -114,9 +114,8 @@ local slashCmdErrorList = {}
 local isBugGrabbedRegistered = false
 local callbacks = nil
 local ae2 = nil
--- TODO Should add rock and ace3
 local function triggerEvent(...)
-	if not callbacks then
+	if not callbacks and LibStub and LibStub("CallbackHandler-1.0", true) then
 		callbacks = LibStub("CallbackHandler-1.0"):New(BugGrabber)
 		function callbacks:OnUsed(target, eventname)
 			if eventname == "BugGrabber_BugGrabbed" then isBugGrabbedRegistered = true end
@@ -297,8 +296,7 @@ local function grabError(err)
 
 		-- First detect an endless loop so as to abort it below
 		if trace:find("BugGrabber") then
-			-- HACK by Mikk 20081031. This test is a VERY bad idea, since it will find anything involving CallbackHandler or LibStub, and both are embedded in BugGrabber!!!
-			-- Nopped out: looping = true
+			looping = true
 		end
 
 		-- "path\to\file-2.0.lua:linenum:message" -- library
