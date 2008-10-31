@@ -95,6 +95,19 @@ elseif GetLocale() == "zhTW" then
 	ADDON_DISABLED = "|cffffff7fBugGrabber|r 和 |cffffff7f%s|r 不能共存。|cffffff7f%s|r 已停用。你可在插件介面停用 |cffffff7fBugGrabber|r，再用 |cffffff7f%s|r。"
 	BUGGRABBER_STOPPED = "|cffffff7fBugGrabber|r 現正暫停，因為每秒捕捉到超過%d個錯誤。它會在%d秒後重新開始。"
 	BUGGRABBER_RESUMING = "|cffffff7fBugGrabber|r 已重新開始。"
+	elseif GetLocale() == "ruRU" then
+	CMD_CREATED = "Ошибка была обнаружена, спользуйте /buggrabber чтобы напечатать ее."
+	USAGE = "Использование: /buggrabber <1-%d>."
+	ERROR_INDEX = "Предоставленный индекс должен быть числом"
+	ERROR_UNKNOWN_INDEX = "Индекс  %d  не существует в загруженной таблице ошибок."
+	STARTUP_ERRORS = "были %d Ошибками Старта:"
+	STARTUP_ERRORS_MANY = "Были %d Ошибками Запуска, используйте /buggrabber <номер> чтобы их напечатать."
+	UNIQUE_CAPTURE = "BugGrabber захватил уникальную ошибку:\n%s\n---"
+	--ADDON_CALL_PROTECTED = "[%s] Аддон '%s' Пытался исполнить защищенную '%s' Функцию."
+	--ADDON_CALL_PROTECTED_MATCH = "^%[(.*)%] (Аддон '.*' пытался исполнить '.*' функцию.)$"
+	ADDON_DISABLED = "|cffffff7fBugGrabber|r и |cffffff7f%s|r не может существовать вместе, |cffffff7f%s|r был неисправный. если хотите выдите из WoW nun отключите неисправный аддон, |cffffff7fBugGrabber|r повторно запустил аддон|cffffff7f%s|r."
+	BUGGRABBER_STOPPED = "|cffffff7fBugGrabber|r прекратил захватытвать ошибки, так как он захватил больше %d ошибок  в секунду. Захват возобновиться в течении %d Секунд."
+	BUGGRABBER_RESUMING = "|cffffff7fBugGrabber|r захватил ошибки снова."
 end
 
 local _G = getfenv(0)
