@@ -1,5 +1,6 @@
 ﻿## Interface: 30000
 ## Title: BugGrabber
+## Title-ruRU:Собиратель ошибок
 ## Version: 2.2
 ## Notes: Grabs bugs for the bug sack.
 ## Notes-zhTW: 搜集錯誤訊息提供 BugSack 顯示。
