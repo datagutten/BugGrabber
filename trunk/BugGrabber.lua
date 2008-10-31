@@ -97,7 +97,9 @@ elseif GetLocale() == "zhTW" then
 	BUGGRABBER_RESUMING = "|cffffff7fBugGrabber|r 已重新開始。"
 end
 
-BugGrabber = {}
+local _G = getfenv(0)
+
+local BugGrabber = {}
 local frame = CreateFrame("Frame")
 
 local real_seterrorhandler = seterrorhandler
@@ -125,8 +127,8 @@ local function triggerEvent(...)
 		end
 	end
 	if callbacks then callbacks:Fire(...) end
-	if not ae2 and AceLibrary and AceLibrary:HasInstance("AceEvent-2.0") then
-		ae2 = AceLibrary("AceEvent-2.0")
+	if not ae2 and LibStub and LibStub("AceEvent-2.0", true) then
+		ae2 = LibStub("AceEvent-2.0", true)
 	end
 	if ae2 then ae2:TriggerEvent(...) end
 end
@@ -304,39 +306,14 @@ local function grabError(err)
 			match, _, path, file, line, msg = trace:find("^.-([^\\]+\\)([^\\]-%-%d+%.%d+%.lua)(:%d+):(.*)$")
 			local addon = trace:match("^.-[A%.][d%.][d%.][Oo]ns\\([^\\]-)\\")
 			if match then
-				local good = false
-				if AceLibrary then
-					local lib = file:gsub("%.lua$", "")
-					if AceLibrary:HasInstance(lib, false) then
-						lib = AceLibrary(lib)
-						if type(rawget(lib, "GetLibraryVersion")) == "function" then
-							local success, major, minor = pcall(lib.GetLibraryVersion, lib)
-							if success then
-								path = major .. "-" .. (minor or "?")
-								if addon then
-									file = " (" .. addon .. ")"
-								else
-									file = ""
-								end
-								good = true
-							end
-						end
-					end
-				end
-				if not good and Rock then
-					local lib = file:gsub("%.lua$", "")
-					lib = Rock(lib, true, true)
-					if lib and type(rawget(lib, "GetLibraryVersion")) == "function" then
-						local success, major, minor = pcall(lib.GetLibraryVersion, lib)
-						if success then
-							path = major .. "-" .. (minor or "?")
-							if addon then
-								file = " (" .. addon .. ")"
-							else
-								file = ""
-							end
-							good = true
-						end
+				if LibStub then
+					local major = file:gsub("%.lua$", "")
+					local lib, minor = LibStub(major, true)
+					path = major .. "-" .. (minor or "?")
+					if addon then
+						file = " (" .. addon .. ")"
+					else
+						file = ""
 					end
 				end
 				found = true
@@ -354,8 +331,8 @@ local function grabError(err)
 					addonObject = _G[addon:match("^[^_]+_(.*)$")]
 				end
 				local version, revision = nil, nil
-				if AceLibrary and AceLibrary:HasInstance(addon, false) then
-					local _, r = AceLibrary(addon)
+				if LibStub and LibStub(addon, true) then
+					local _, r = LibStub(addon, true)
 					version = r
 				end
 				if type(addonObject) == "table" then
@@ -629,5 +606,7 @@ BugGrabber:RegisterAddonActionEvents()
 
 real_seterrorhandler(grabError)
 function seterrorhandler() --[[ noop ]] end
+
+_G.BugGrabber = BugGrabber
 
 -- vim:set ts=4:
