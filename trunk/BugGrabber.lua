@@ -297,7 +297,8 @@ local function grabError(err)
 
 		-- First detect an endless loop so as to abort it below
 		if trace:find("BugGrabber") then
-			looping = true
+			-- HACK by Mikk 20081031. This test is a VERY bad idea, since it will find anything involving CallbackHandler or LibStub, and both are embedded in BugGrabber!!!
+			-- Nopped out: looping = true
 		end
 
 		-- "path\to\file-2.0.lua:linenum:message" -- library
