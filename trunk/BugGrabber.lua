@@ -129,7 +129,7 @@ local slashCmdErrorList = {}
 local isBugGrabbedRegistered = false
 local callbacks = nil
 local ae2 = nil
-local function triggerEvent(...)
+local function setupCallbacks()
 	if not callbacks and LibStub and LibStub("CallbackHandler-1.0", true) then
 		callbacks = LibStub("CallbackHandler-1.0"):New(BugGrabber)
 		function callbacks:OnUsed(target, eventname)
@@ -139,10 +139,13 @@ local function triggerEvent(...)
 			if eventname == "BugGrabber_BugGrabbed" then isBugGrabbedRegistered = false end
 		end
 	end
-	if callbacks then callbacks:Fire(...) end
 	if not ae2 and LibStub and LibStub("AceEvent-2.0", true) then
 		ae2 = LibStub("AceEvent-2.0", true)
 	end
+end
+local function triggerEvent(...)
+	if not callbacks or not ae2 then setupCallbacks() end
+	if callbacks then callbacks:Fire(...) end
 	if ae2 then ae2:TriggerEvent(...) end
 end
 
@@ -606,6 +609,7 @@ frame:SetScript("OnEvent", function(self, event, arg1, arg2)
 		grabError(ADDON_CALL_PROTECTED:format(event, arg1, arg2))
 	elseif event == "ADDON_LOADED" then
 		addonLoaded(arg1)
+		if not callbacks then setupCallbacks() end
 	elseif event == "PLAYER_LOGIN" then
 		real_seterrorhandler(grabError)
 		if IsAddOnLoaded("Stubby") and type(_G.Swatter) ~= "table" then
