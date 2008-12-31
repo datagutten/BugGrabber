@@ -364,6 +364,7 @@ local function grabError(err)
 				elseif type(version) == "string" and revision and not version:find(revision) then
 					version = version .. "." .. revision
 				end
+				if not version then version = GetAddOnMetadata(addon, "X-Curse-Packaged-Version") end
 				if version then
 					path = addon .. "-" .. version .. path:gsub("^[^\\]*", "")
 				end
