@@ -433,6 +433,11 @@ local function grabError(err)
 
 	errorsSinceLastReset = errorsSinceLastReset + 1
 
+	local locals = debuglocals(real and 4 or 3)
+	if locals then
+        errmsg = errmsg .. "\nLocals:|r\n" .. locals
+    end
+
 	-- Store the error
 	saveError(errmsg, errorType)
 end
