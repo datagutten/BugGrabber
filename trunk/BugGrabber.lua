@@ -216,11 +216,11 @@ local function saveError(message, errorType)
 		while m:len() > 980 and chunks <= maxChunks do
 			local q
 			q, m = m:sub(1, 980), m:sub(981)
-			table.insert(oe.message, q)
+			oe.message[#oe.message + 1] = q
 			chunks = chunks + 1
 		end
 		if m:len() > 980 then m = m:sub(1, 980) end
-		table.insert(oe.message, m)
+		oe.message[#oe.message + 1] = m
 	end
 
 	-- Insert the error into the correct database if it's not there already.
@@ -231,7 +231,7 @@ local function saveError(message, errorType)
 	if type(oe_message) == "table" then
 		oe_message = oe_message[1]
 	end
-	for i, err in ipairs(db) do
+	for i, err in next, db do
 		local err_message = err.message
 		if type(err_message) == "table" then
 			err_message = err_message[1]
@@ -255,12 +255,7 @@ local function saveError(message, errorType)
 	-- If the error was not found in the current session, append it to the
 	-- database.
 	if not found then
-		table.insert(db, oe)
-
-		-- Save only the last <limit> errors (otherwise the SV gets too big)
-		if #db > BugGrabberDB.limit then
-			table.remove(db, 1)
-		end
+		BugGrabber:StoreError(oe)
 	end
 
 	-- Trigger event.
@@ -269,9 +264,19 @@ local function saveError(message, errorType)
 		triggerEvent(e, oe)
 
 		if not found then
-			table.insert(slashCmdErrorList, oe)
+			slashCmdErrorList[#slashCmdErrorList + 1] = oe
 			createSlashCmd()
 		end
+	end
+end
+
+function BugGrabber:StoreError(errorObject)
+	local db = BugGrabber:GetDB()
+	db[#db + 1] = errorObject
+
+	-- Save only the last <limit> errors (otherwise the SV gets too big)
+	if #db > BugGrabberDB.limit then
+		table.remove(db, 1)
 	end
 end
 
@@ -435,8 +440,8 @@ local function grabError(err)
 
 	local locals = debuglocals(real and 4 or 3)
 	if locals then
-        errmsg = errmsg .. "\nLocals:|r\n" .. locals
-    end
+		errmsg = errmsg .. "\nLocals:|r\n" .. locals
+	end
 
 	-- Store the error
 	saveError(errmsg, errorType)
