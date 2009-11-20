@@ -473,6 +473,10 @@ function BugGrabber:GetDB()
 	return BugGrabberDB.save and BugGrabberDB.errors or stateErrorDatabase
 end
 
+function BugGrabber:GetSessionId()
+	return BugGrabberDB.session
+end
+
 -- Simple setters/getters for settings, meant to be accessed by BugSack
 function BugGrabber:GetSave()
 	return BugGrabberDB.save
