@@ -577,7 +577,7 @@ local function addonLoaded(addon)
 		local sv = BugGrabberDB
 		if type(sv.session) ~= "number" then sv.session = 0 end
 		if type(sv.errors) ~= "table" then sv.errors = {} end
-		if type(sv.limit) ~= "number" then sv.limit = math.ceil(MAX_BUGGRABBER_ERRORS / 2) end
+		if type(sv.limit) ~= "number" then sv.limit = 50 end
 		if type(sv.save) ~= "boolean" then sv.save = true end
 		if type(sv.throttle) ~= "boolean" then sv.throttle = true end
 
