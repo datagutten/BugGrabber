@@ -106,7 +106,7 @@ elseif GetLocale() == "zhCN" then
 	ADDON_CALL_PROTECTED = "[%s] 插件 '%s' 尝试调用保护功能 '%s'。"
 	ADDON_CALL_PROTECTED_MATCH = "^%[(.*)%] (插件 '.*' 尝试调用保护功能 '.*'.)$"
 	ADDON_DISABLED = "|cffffff7fBugGrabber|r 和 |cffffff7f%s|r 不能共存。|cffffff7f%s|r 已停用。可在插件界面停用 |cffffff7fBugGrabber|r 再用 |cffffff7f%s|r。"
-	BUGGRABBER_STOPPED = "|cffffff7fBugGrabber|r 现正展厅，因为每秒捕捉到超过%d个错误。它会在%d秒后重新开始。"
+	BUGGRABBER_STOPPED = "|cffffff7fBugGrabber|r 现正暂停，因为每秒捕捉到超过%d个错误。它会在%d秒后重新开始。"
 	BUGGRABBER_RESUMING = "|cffffff7fBugGrabber|r 已重新开始。"
 elseif GetLocale() == "ruRU" then
 	CMD_CREATED = "Ошибка была обнаружена, спользуйте /buggrabber чтобы напечатать ее."
