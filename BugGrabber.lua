@@ -121,6 +121,19 @@ elseif GetLocale() == "ruRU" then
 	ADDON_DISABLED = "|cffffff7fBugGrabber|r и |cffffff7f%s|r не может существовать вместе, |cffffff7f%s|r был неисправный. если хотите выдите из WoW nun отключите неисправный аддон, |cffffff7fBugGrabber|r повторно запустил аддон|cffffff7f%s|r."
 	BUGGRABBER_STOPPED = "|cffffff7fBugGrabber|r прекратил захватытвать ошибки, так как он захватил больше %d ошибок  в секунду. Захват возобновиться в течении %d Секунд."
 	BUGGRABBER_RESUMING = "|cffffff7fBugGrabber|r захватил ошибки снова."
+elseif GetLocale() == "frFR" then
+	CMD_CREATED = "Une erreur a été détectée, tapez /buggrabber pour l'afficher."
+	USAGE = "Utilisation: /buggrabber <1-%d>."
+	ERROR_INDEX = "L'élément donné doit être un nombre."
+	ERROR_UNKNOWN_INDEX = "L'élément %d n'existe pas dans la table d'erreurs chargée."
+	STARTUP_ERRORS = "Il y a eu %d erreurs au démarrage:"
+	STARTUP_ERRORS_MANY = "Il y a eu %d erreurs au démarrage, merci d'utiliser /buggrabber <nombre> pour les afficher."
+	--UNIQUE_CAPTURE = "BugGrabber a capturé une seule erreur:\n%s\n---"
+	ADDON_CALL_PROTECTED = "[%s] L'AddOn '%s' a tenté d'appeler la fonction protégée '%s'."
+	ADDON_CALL_PROTECTED_MATCH = "^%[(.*)%] (L'AddOn '.*' a tenté d'appeler la fonction protégée '.*'.)$"
+	ADDON_DISABLED = "|cffffff7fBugGrabber|r et |cffffff7f%s|r ne peuvent pas être lancés en même temps. |cffffff7f%s|r a été désactivé. Si vous le souhaitez, vous pouvez vous déconnecter, désactiver |cffffff7fBugGrabber|r et réactiver |cffffff7f%s|r."
+	BUGGRABBER_STOPPED = "|cffffff7fBugGrabber|r a cessé de capturer des erreurs, car plus de %d erreurs ont été capturées par seconde. La capture sera reprise dans %d secondes."
+	BUGGRABBER_RESUMING = "|cffffff7fBugGrabber|r capture les erreurs à nouveau."
 end
 
 local _G = getfenv(0)
