@@ -154,7 +154,6 @@ local slashCmdErrorList = {}
 
 local isBugGrabbedRegistered = false
 local callbacks = nil
-local ae2 = nil
 local function setupCallbacks()
 	if not callbacks and LibStub and LibStub("CallbackHandler-1.0", true) then
 		callbacks = LibStub("CallbackHandler-1.0"):New(BugGrabber)
@@ -165,18 +164,10 @@ local function setupCallbacks()
 			if eventname == "BugGrabber_BugGrabbed" then isBugGrabbedRegistered = false end
 		end
 	end
-	if not ae2 and LibStub and LibStub("AceEvent-2.0", true) then
-		ae2 = LibStub("AceEvent-2.0", true)
-	end
 end
 local function triggerEvent(...)
-	if not callbacks or not ae2 then setupCallbacks() end
+	if not callbacks then setupCallbacks() end
 	if callbacks then callbacks:Fire(...) end
-	if ae2 then ae2:TriggerEvent(...) end
-end
-
-local function print(text)
-	DEFAULT_CHAT_FRAME:AddMessage(text)
 end
 
 local function slashHandler(index)
@@ -218,7 +209,7 @@ local function createSlashCmd()
 	_G["SLASH_"..name.."1"] = "/buggrabber"
 
 	slashCmdCreated = true
-	if not isBugGrabbedRegistered and (not ae2 or (ae2 and not ae2:IsEventRegistered("BugGrabber_BugGrabbed"))) then
+	if not isBugGrabbedRegistered then
 		print(CMD_CREATED)
 	end
 end
