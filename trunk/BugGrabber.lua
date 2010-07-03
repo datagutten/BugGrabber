@@ -316,6 +316,7 @@ end
 -- Error handler
 local function grabError(err)
 	if paused then return end
+	err = tostring(err)
 
 	-- Get the full backtrace
 	local real =
