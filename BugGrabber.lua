@@ -27,6 +27,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 ]]
 
+local bugGrabberAddonName = ...
+
+-- Fetched from X-BugGrabber-Display in the TOC of a display addon.
+-- Should implement :FormatError(errorTable).
+local displayObjectName = nil
+
 MAX_BUGGRABBER_ERRORS = 1000
 
 -- If we get more errors than this per second, we stop all capturing until the
@@ -36,6 +42,10 @@ BUGGRABBER_TIME_TO_RESUME = 60
 BUGGRABBER_SUPPRESS_THROTTLE_CHAT = nil
 
 -- Localization
+local NO_DISPLAY_1 = "|cffff4411You seem to be running !BugGrabber with no display addon to go along with it. Although !BugGrabber provides a slash command for accessing in-game errors, a display addon can help you manage these errors in a more convenient way.|r"
+local NO_DISPLAY_2 = "|cffff4411The standard !BugGrabber display is called |r|cff44ff44BugSack|r|cffff4411, and can probably be found on the same site where you found !BugGrabber.|r"
+local NO_DISPLAY_STOP = "|cffff4411If you don't want to be reminded about this again, please run |cff44ff44/stopnag|r|cffff4411.|r"
+local STOP_NAG = "|cffff4411!BugGrabber will not nag about missing |r|cff44ff44BugSack|r|cffff4411 again until next patch.|r"
 local CMD_CREATED = "An error has been detected, use /buggrabber to print it."
 local USAGE = "Usage: /buggrabber <1-%d>."
 local ERROR_INDEX = "The provided index must be a number."
@@ -186,9 +196,15 @@ local function slashHandler(index)
 	end
 	local err = slashCmdErrorList[index]
 	if type(err) ~= "table" or (type(err.message) ~= "string" and type(err.message) ~= "table") then return end
-	if BugSack and type(BugSack.FormatError) == "function" then
-		print(tostring(index) .. ". " .. BugSack:FormatError(err))
-	else
+	local found = nil
+	if displayObjectName and _G[displayObjectName] then
+		local display = _G[displayObjectName]
+		if type(display) == "table" and type(display.FormatError) == "function" then
+			found = true
+			print(tostring(index) .. ". " .. display:FormatError(err))
+		end
+	end
+	if not found then
 		local m = err.message
 		if type(m) == "table" then
 			m = table.concat(m, "")
@@ -615,6 +631,29 @@ local function addonLoaded(addon)
 		if sv.throttle then
 			frame:SetScript("OnUpdate", onUpdateFunc)
 		end
+
+		local hasDisplay = nil
+		for i = 1, GetNumAddOns() do
+			local meta = GetAddOnMetadata(i, "X-BugGrabber-Display")
+			if meta then
+				displayObjectName = meta
+				hasDisplay = true
+				break
+			end
+		end
+
+		local currentInterface = select(4, GetBuildInfo())
+		if type(currentInterface) ~= "number" then currentInterface = 0 end
+		if not hasDisplay and (not sv.stopnag or sv.stopnag < currentInterface) then
+			print(NO_DISPLAY_1)
+			print(NO_DISPLAY_2)
+			print(NO_DISPLAY_STOP)
+			_G.SlashCmdList.BugGrabberStopNag = function()
+				print(STOP_NAG)
+				sv.stopnag = currentInterface
+			end
+			_G.SLASH_BugGrabberStopNag1 = "/stopnag"
+		end
 	elseif (addon == "!Swatter" or (type(SwatterData) == "table" and SwatterData.enabled)) and Swatter then
 		print(string.gsub(ADDON_DISABLED, "%%s", "Swatter"))
 		DisableAddOn("!Swatter")
@@ -639,9 +678,9 @@ end
 -- Now register for our needed events
 frame:SetScript("OnEvent", function(self, event, arg1, arg2)
 	if event == "ADDON_ACTION_BLOCKED" or event == "ADDON_ACTION_FORBIDDEN" then
-		grabError(ADDON_CALL_PROTECTED:format(event, arg1, arg2))
+		grabError(ADDON_CALL_PROTECTED:format(event, arg1 or "?", arg2 or "?"))
 	elseif event == "ADDON_LOADED" then
-		addonLoaded(arg1)
+		addonLoaded(arg1 or "?")
 		if not callbacks then setupCallbacks() end
 	elseif event == "PLAYER_LOGIN" then
 		real_seterrorhandler(grabError)
