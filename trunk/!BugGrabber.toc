@@ -1,4 +1,5 @@
 ﻿## Interface: 30300
+## X-Compatible-With: 40000
 ## Title: BugGrabber
 ## Title-ruRU:Собиратель ошибок
 ## Version: 2.2
