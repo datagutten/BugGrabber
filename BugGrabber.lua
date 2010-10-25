@@ -571,24 +571,27 @@ local function addonLoaded(addon)
 		local hasDisplay = nil
 		for i = 1, GetNumAddOns() do
 			local meta = GetAddOnMetadata(i, "X-BugGrabber-Display")
-			if meta then
+			local _, _, _, enabled = GetAddOnInfo(i)
+			if meta and enabled then
 				displayObjectName = meta
 				hasDisplay = true
 				break
 			end
 		end
 
-		local currentInterface = select(4, GetBuildInfo())
-		if type(currentInterface) ~= "number" then currentInterface = 0 end
-		if not hasDisplay and (not sv.stopnag or sv.stopnag < currentInterface) then
-			print(L.NO_DISPLAY_1)
-			print(L.NO_DISPLAY_2)
-			print(L.NO_DISPLAY_STOP)
-			_G.SlashCmdList.BugGrabberStopNag = function()
-				print(L.STOP_NAG)
-				sv.stopnag = currentInterface
+		if not hasDisplay then
+			local currentInterface = select(4, GetBuildInfo())
+			if type(currentInterface) ~= "number" then currentInterface = 0 end
+			if not sv.stopnag or sv.stopnag < currentInterface then
+				print(L.NO_DISPLAY_1)
+				print(L.NO_DISPLAY_2)
+				print(L.NO_DISPLAY_STOP)
+				_G.SlashCmdList.BugGrabberStopNag = function()
+					print(L.STOP_NAG)
+					sv.stopnag = currentInterface
+				end
+				_G.SLASH_BugGrabberStopNag1 = "/stopnag"
 			end
-			_G.SLASH_BugGrabberStopNag1 = "/stopnag"
 		end
 	elseif (addon == "!Swatter" or (type(SwatterData) == "table" and SwatterData.enabled)) and Swatter then
 		print(L.ADDON_DISABLED:gsub("%%s", "Swatter"))
