@@ -58,26 +58,6 @@ local L = {
 	BUGGRABBER_STOPPED = "|cffffff7fBugGrabber|r has stopped capturing errors, since it has captured more than %d errors per second. Capturing will resume in %d seconds.",
 	BUGGRABBER_RESUMING = "|cffffff7fBugGrabber|r is capturing errors again.",
 }
-do
-	local locale = GetLocale()
-	if locale == "koKR" then
---@localization(locale="koKR", format="lua_additive_table", handle-unlocalized="ignore", escape-non-ascii=true)@
-	elseif locale == "deDE" then
---@localization(locale="deDE", format="lua_additive_table", handle-unlocalized="ignore", escape-non-ascii=true)@
-	elseif locale == "esES" then
---@localization(locale="esES", format="lua_additive_table", handle-unlocalized="ignore", escape-non-ascii=true)@
-	elseif locale == "zhTW" then
---@localization(locale="zhTW", format="lua_additive_table", handle-unlocalized="ignore", escape-non-ascii=true)@
-	elseif locale == "zhCN" then
---@localization(locale="zhCN", format="lua_additive_table", handle-unlocalized="ignore", escape-non-ascii=true)@
-	elseif locale == "ruRU" then
---@localization(locale="ruRU", format="lua_additive_table", handle-unlocalized="ignore", escape-non-ascii=true)@
-	elseif locale == "frFR" then
---@localization(locale="frFR", format="lua_additive_table", handle-unlocalized="ignore", escape-non-ascii=true)@
-	elseif locale == "esMX" then
---@localization(locale="esMX", format="lua_additive_table", handle-unlocalized="ignore", escape-non-ascii=true)@
-	end
-end
 -----------------------------------------------------------------------
 
 local BugGrabber = {}
@@ -567,6 +547,13 @@ local function addonLoaded(addon)
 		if sv.throttle then
 			frame:SetScript("OnUpdate", onUpdateFunc)
 		end
+
+		-- load locales
+		local locale = GetLocale()
+		if locale ~= "enUS" and type(BugGrabber.LoadTranslations) == "function" then
+			BugGrabber:LoadTranslations(locale, L)
+		end
+		if type(BugGrabber.LoadTranslations) == "function" then BugGrabber.LoadTranslations = nil end
 
 		local hasDisplay = nil
 		for i = 1, GetNumAddOns() do
