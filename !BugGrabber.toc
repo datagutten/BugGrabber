@@ -1,10 +1,7 @@
 ﻿## Interface: 40000
 ## Title: BugGrabber
-## Title-ruRU:Собиратель ошибок
 ## Version: 2.2
 ## Notes: Grabs bugs for the bug sack.
-## Notes-zhTW: 搜集錯誤訊息提供 BugSack 顯示。
-## Notes-esES: Graba errores para BugSack.
 ## Author: Rabbit
 ## X-Credits: Rowne, Ramble, kergoth, ckknight, Fritti
 ## X-License: GPL v2 or later.
@@ -13,4 +10,5 @@
 ## SavedVariables: BugGrabberDB
 
 BugGrabber.lua
+locales.lua
 
