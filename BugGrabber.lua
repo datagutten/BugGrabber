@@ -384,7 +384,7 @@ local function grabError(err)
 
 		-- ADDON_ACTION_BLOCKED
 		if not found then
-			match, _, file, msg = trace:find(ADDON_CALL_PROTECTED_MATCH)
+			match, _, file, msg = trace:find(L.ADDON_CALL_PROTECTED_MATCH)
 			if match then
 				found = true
 				path = "<event>"
