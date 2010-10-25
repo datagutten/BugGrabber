@@ -27,11 +27,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 ]]
 
-local bugGrabberAddonName = ...
-
--- Fetched from X-BugGrabber-Display in the TOC of a display addon.
--- Should implement :FormatError(errorTable).
-local displayObjectName = nil
+-----------------------------------------------------------------------
+-- Global config variables
 
 MAX_BUGGRABBER_ERRORS = 1000
 
@@ -41,123 +38,56 @@ BUGGRABBER_ERRORS_PER_SEC_BEFORE_THROTTLE = 20
 BUGGRABBER_TIME_TO_RESUME = 60
 BUGGRABBER_SUPPRESS_THROTTLE_CHAT = nil
 
+-----------------------------------------------------------------------
 -- Localization
-local NO_DISPLAY_1 = "|cffff4411You seem to be running !BugGrabber with no display addon to go along with it. Although !BugGrabber provides a slash command for accessing in-game errors, a display addon can help you manage these errors in a more convenient way.|r"
-local NO_DISPLAY_2 = "|cffff4411The standard !BugGrabber display is called |r|cff44ff44BugSack|r|cffff4411, and can probably be found on the same site where you found !BugGrabber.|r"
-local NO_DISPLAY_STOP = "|cffff4411If you don't want to be reminded about this again, please run |cff44ff44/stopnag|r|cffff4411.|r"
-local STOP_NAG = "|cffff4411!BugGrabber will not nag about missing |r|cff44ff44BugSack|r|cffff4411 again until next patch.|r"
-local CMD_CREATED = "An error has been detected, use /buggrabber to print it."
-local USAGE = "Usage: /buggrabber <1-%d>."
-local ERROR_INDEX = "The provided index must be a number."
-local ERROR_UNKNOWN_INDEX = "The index %d does not exist in the load error table."
-local STARTUP_ERRORS = "There were %d startup errors:"
-local STARTUP_ERRORS_MANY = "There were %d startup errors, please use /buggrabber <number> to print them."
-local UNIQUE_CAPTURE = "BugGrabber captured a unique error:\n%s\n---"
-local ADDON_CALL_PROTECTED = "[%s] AddOn '%s' tried to call the protected function '%s'."
-local ADDON_CALL_PROTECTED_MATCH = "^%[(.*)%] (AddOn '.*' tried to call the protected function '.*'.)$"
-local ADDON_DISABLED = "|cffffff7fBugGrabber|r and |cffffff7f%s|r cannot coexist together. |cffffff7f%s|r has been disabled because of this. If you want to, you may exit out, disable |cffffff7fBugGrabber|r and reenable |cffffff7f%s|r."
-local BUGGRABBER_STOPPED = "|cffffff7fBugGrabber|r has stopped capturing errors, since it has captured more than %d errors per second. Capturing will resume in %d seconds."
-local BUGGRABBER_RESUMING = "|cffffff7fBugGrabber|r is capturing errors again."
-
-if GetLocale() == "koKR" then
-  CMD_CREATED = "오류가 발견되었으며, /buggrabber를 사용하여 출력할 수 있습니다."
-	USAGE = "사용법: /buggrabber <1-%d>."
-	ERROR_INDEX = "색인값은 숫자이어야 합니다."
-	ERROR_UNKNOWN_INDEX = "불러온 오류 목록에 %d번째 오류는 존재하지 않습니다."
-	STARTUP_ERRORS = "%d개의 시작시 오류가 발생:"
-	STARTUP_ERRORS_MANY = "%d개의 시작시 오류가 발생했습니다, /buggrabber <숫자>를 사용해서 해당 오류를 볼 수 있습니다."
-	UNIQUE_CAPTURE = "BugGrabber가 발견한 오류:\n%s\n---"
-	ADDON_CALL_PROTECTED = "[%s] 애드온 '%s' 보호된 함수 호출 '%s'."
-	ADDON_CALL_PROTECTED_MATCH = "^%[(.*)%] (애드온 '.*' 보호된 함수 호출 '.*'.)$"
-	ADDON_DISABLED = "|cffffff7fBugGrabber|r와 |cffffff7f%s|r는 함께 공존할 수 없습니다. |cffffff7f%s|r에 의해 중지되었습니다. 만약 당신이 원하면, 접속을 종료한 후, |cffffff7fBugGrabber|r를 중지하고 |cffffff7f%s|r를 재활성하세요."
-	BUGGRABBER_STOPPED = "이것은 초당 %d개 이상의 오류를 발견하였기에 |cffffff7fBugGrabber|r의 오류 캡쳐가 중지되었으며, 캡쳐는 %d초 후 재개됩니다."
-	BUGGRABBER_RESUMING = "|cffffff7fBugGrabber|r가 다시 오류를 캡쳐합니다."
-elseif GetLocale() == "deDE" then
-	CMD_CREATED = "Ein Fehler wurde entdeckt, benutze /buggrabber um ihn anzuzeigen."
-	USAGE = "Benutzung: /buggrabber <1-%d>."
-	ERROR_INDEX = "Der zur Verfügung gestellte Index muß eine Zahl sein."
-	ERROR_UNKNOWN_INDEX = "Der Index %d existiert nicht in der geladenen Fehlerliste."
-	STARTUP_ERRORS = "Es gab %d Fehler beim Start:"
-	STARTUP_ERRORS_MANY = "Es gab %d Fehler beim Start, verwende bitte /buggrabber <Anzahl> um sie aufzulisten."
-	UNIQUE_CAPTURE = "BugGrabber hat einen einzigartigen Fehler aufgezeichnet:\n%s\n---"
-	ADDON_CALL_PROTECTED = "[%s] AddOn '%s' hat versucht die geschützte Funktion '%s' aufzurufen."
-	ADDON_CALL_PROTECTED_MATCH = "^%[(.*)%] (AddOn '.*' hat versucht die geschützte Funktion '.*' aufzurufen.)$"
-	ADDON_DISABLED = "|cffffff7fBugGrabber|r und |cffffff7f%s|r können nicht zusammen laufen, |cffffff7f%s|r wurde deshalb deaktiviert. Du kannst jetzt WoW schließen, |cffffff7fBugGrabber|r deaktivieren und |cffffff7f%s|r erneut aktivieren."
-	BUGGRABBER_STOPPED = "|cffffff7fBugGrabber|r hat die Aufzeichnung von Fehlern gestoppt, weil mehr als %d Fehler pro Sekunde erzeugt wurden. Die Aufzeichnung wird in %d Sekunden fortgesetzt."
-	BUGGRABBER_RESUMING = "|cffffff7fBugGrabber|r zeichnet nun wieder Fehler auf."
-elseif GetLocale() == "esES" then
-	CMD_CREATED = "Un error ha sido detectado, utiliza /buggrabber para imprimirlo."
-	USAGE = "Uso: /buggrabber <1-%d>."
-	ERROR_INDEX = "El \195\173ndice introducido debe ser un n\195\186mero."
-	ERROR_UNKNOWN_INDEX = "El \195\173ndice %d no existe en la tabla de errores de carga."
-	STARTUP_ERRORS = "Ha habido %d errores de arranque:"
-	STARTUP_ERRORS_MANY = "Ha habido %d errores de arranque, por favor, usa /buggrabber <number> para listarlos."
-	UNIQUE_CAPTURE = "BugGrabber ha capturado un \195\186nico error:\n%s\n---"
-	ADDON_CALL_PROTECTED = "[%s] El accesorio '%s' ha intentado llamar a la funci\195\179n protegida '%s'."
-	ADDON_CALL_PROTECTED_MATCH = "^%[(.*)%] (El accesorio '.*' ha intentado llamar a la funci\195\179n protegida '.*'.)$"
-	ADDON_DISABLED = "|cffffff7fBugGrabber|r y |cffffff7f%s|r no pueden coexistir juntos. |cffffff7f%s|r ha sido desactivado por este motivo. Si lo deseas, puedes salir, desactivar |cffffff7fBugGrabber|r y reactivar |cffffff7f%s|r."
-	BUGGRABBER_STOPPED = "|cffffff7fBugGrabber|r ha detenido la captuta de errores, ya que ha capturado m\195\161s de %d errores por segundo. La captura se reanudar\195\161 en %d segundos."
-	BUGGRABBER_RESUMING = "|cffffff7fBugGrabber|r est\195\161 capturando errores de nuevo."
-elseif GetLocale() == "zhTW" then
-	CMD_CREATED = "發現錯誤，用 /buggrabber 列出這錯誤。"
-	USAGE = "用法：/buggrabber <1-%d>。"
-	ERROR_INDEX = "提供的索引值必須是數字。"
-	ERROR_UNKNOWN_INDEX = "提供的索引值「%d」不是正確的。"
-	STARTUP_ERRORS = "在啟動時發生%d個錯誤："
-	STARTUP_ERRORS_MANY = "在啟動時發生%d個錯誤，請使用 /buggrabber <索引值> 來列出。"
-	UNIQUE_CAPTURE = "捕捉到新的錯誤：\n%s\n---"
-	ADDON_CALL_PROTECTED = "[%s] 插件 '%s' 嘗試調用保護功能 '%s'。"
-	ADDON_CALL_PROTECTED_MATCH = "^%[(.*)%] (插件 '.*' 嘗試調用保護功能 '.*'.)$"
-	ADDON_DISABLED = "|cffffff7fBugGrabber|r 和 |cffffff7f%s|r 不能共存。|cffffff7f%s|r 已停用。可在插件介面停用 |cffffff7fBugGrabber|r，再用 |cffffff7f%s|r。"
-	BUGGRABBER_STOPPED = "|cffffff7fBugGrabber|r 現正暫停，因為每秒捕捉到超過%d個錯誤。它會在%d秒後重新開始。"
-	BUGGRABBER_RESUMING = "|cffffff7fBugGrabber|r 已重新開始。"
-elseif GetLocale() == "zhCN" then
-	CMD_CREATED = "发现一个错误，用 /buggrabber 列出这个错误。"
-	USAGE = "用法：/buggrabber <1-%d>。"
-	ERROR_INDEX = "提供的索引值必须是数字。"
-	ERROR_UNKNOWN_INDEX = "提供的索引值「%d」不是正确的。"
-	STARTUP_ERRORS = "在启动时发生%d个错误："
-	STARTUP_ERRORS_MANY = "在启动时发生%d个错误，请使用 /buggrabber <索引值>来列出。"
-	UNIQUE_CAPTURE = "BugGrabber 捕捉到新的错误：\n%s\n---"
-	ADDON_CALL_PROTECTED = "[%s] 插件 '%s' 尝试调用保护功能 '%s'。"
-	ADDON_CALL_PROTECTED_MATCH = "^%[(.*)%] (插件 '.*' 尝试调用保护功能 '.*'.)$"
-	ADDON_DISABLED = "|cffffff7fBugGrabber|r 和 |cffffff7f%s|r 不能共存。|cffffff7f%s|r 已停用。可在插件界面停用 |cffffff7fBugGrabber|r 再用 |cffffff7f%s|r。"
-	BUGGRABBER_STOPPED = "|cffffff7fBugGrabber|r 现正暂停，因为每秒捕捉到超过%d个错误。它会在%d秒后重新开始。"
-	BUGGRABBER_RESUMING = "|cffffff7fBugGrabber|r 已重新开始。"
-elseif GetLocale() == "ruRU" then
-	CMD_CREATED = "Ошибка была обнаружена, спользуйте /buggrabber чтобы напечатать ее."
-	USAGE = "Использование: /buggrabber <1-%d>."
-	ERROR_INDEX = "Предоставленный индекс должен быть числом"
-	ERROR_UNKNOWN_INDEX = "Индекс  %d  не существует в загруженной таблице ошибок."
-	STARTUP_ERRORS = "были %d Ошибками Старта:"
-	STARTUP_ERRORS_MANY = "Были %d Ошибками Запуска, используйте /buggrabber <номер> чтобы их напечатать."
-	UNIQUE_CAPTURE = "BugGrabber захватил уникальную ошибку:\n%s\n---"
-	--ADDON_CALL_PROTECTED = "[%s] Аддон '%s' Пытался исполнить защищенную '%s' Функцию."
-	--ADDON_CALL_PROTECTED_MATCH = "^%[(.*)%] (Аддон '.*' пытался исполнить '.*' функцию.)$"
-	ADDON_DISABLED = "|cffffff7fBugGrabber|r и |cffffff7f%s|r не может существовать вместе, |cffffff7f%s|r был неисправный. если хотите выдите из WoW nun отключите неисправный аддон, |cffffff7fBugGrabber|r повторно запустил аддон|cffffff7f%s|r."
-	BUGGRABBER_STOPPED = "|cffffff7fBugGrabber|r прекратил захватытвать ошибки, так как он захватил больше %d ошибок  в секунду. Захват возобновиться в течении %d Секунд."
-	BUGGRABBER_RESUMING = "|cffffff7fBugGrabber|r захватил ошибки снова."
-elseif GetLocale() == "frFR" then
-	CMD_CREATED = "Une erreur a été détectée, tapez /buggrabber pour l'afficher."
-	USAGE = "Utilisation: /buggrabber <1-%d>."
-	ERROR_INDEX = "L'élément donné doit être un nombre."
-	ERROR_UNKNOWN_INDEX = "L'élément %d n'existe pas dans la table d'erreurs chargée."
-	STARTUP_ERRORS = "Il y a eu %d erreurs au démarrage:"
-	STARTUP_ERRORS_MANY = "Il y a eu %d erreurs au démarrage, merci d'utiliser /buggrabber <nombre> pour les afficher."
-	--UNIQUE_CAPTURE = "BugGrabber a capturé une seule erreur:\n%s\n---"
-	ADDON_CALL_PROTECTED = "[%s] L'AddOn '%s' a tenté d'appeler la fonction protégée '%s'."
-	ADDON_CALL_PROTECTED_MATCH = "^%[(.*)%] (L'AddOn '.*' a tenté d'appeler la fonction protégée '.*'.)$"
-	ADDON_DISABLED = "|cffffff7fBugGrabber|r et |cffffff7f%s|r ne peuvent pas être lancés en même temps. |cffffff7f%s|r a été désactivé. Si vous le souhaitez, vous pouvez vous déconnecter, désactiver |cffffff7fBugGrabber|r et réactiver |cffffff7f%s|r."
-	BUGGRABBER_STOPPED = "|cffffff7fBugGrabber|r a cessé de capturer des erreurs, car plus de %d erreurs ont été capturées par seconde. La capture sera reprise dans %d secondes."
-	BUGGRABBER_RESUMING = "|cffffff7fBugGrabber|r capture les erreurs à nouveau."
+local L = {
+	NO_DISPLAY_1 = "|cffff4411You seem to be running !BugGrabber with no display addon to go along with it. Although !BugGrabber provides a slash command for accessing in-game errors, a display addon can help you manage these errors in a more convenient way.|r",
+	NO_DISPLAY_2 = "|cffff4411The standard !BugGrabber display is called |r|cff44ff44BugSack|r|cffff4411, and can probably be found on the same site where you found !BugGrabber.|r",
+	NO_DISPLAY_STOP = "|cffff4411If you don't want to be reminded about this again, please run |cff44ff44/stopnag|r|cffff4411.|r",
+	STOP_NAG = "|cffff4411!BugGrabber will not nag about missing |r|cff44ff44BugSack|r|cffff4411 again until next patch.|r",
+	CMD_CREATED = "An error has been detected, use /buggrabber to print it.",
+	USAGE = "Usage: /buggrabber <1-%d>.",
+	ERROR_INDEX = "The provided index must be a number.",
+	ERROR_UNKNOWN_INDEX = "The index %d does not exist in the load error table.",
+	STARTUP_ERRORS = "There were %d startup errors:",
+	STARTUP_ERRORS_MANY = "There were %d startup errors, please use /buggrabber <number> to print them.",
+	UNIQUE_CAPTURE = "BugGrabber captured a unique error:\n%s\n---",
+	ADDON_CALL_PROTECTED = "[%s] AddOn '%s' tried to call the protected function '%s'.",
+	ADDON_CALL_PROTECTED_MATCH = "^%[(.*)%] (AddOn '.*' tried to call the protected function '.*'.)$",
+	ADDON_DISABLED = "|cffffff7fBugGrabber|r and |cffffff7f%s|r cannot coexist together. |cffffff7f%s|r has been disabled because of this. If you want to, you may exit out, disable |cffffff7fBugGrabber|r and reenable |cffffff7f%s|r.",
+	BUGGRABBER_STOPPED = "|cffffff7fBugGrabber|r has stopped capturing errors, since it has captured more than %d errors per second. Capturing will resume in %d seconds.",
+	BUGGRABBER_RESUMING = "|cffffff7fBugGrabber|r is capturing errors again.",
+}
+do
+	local locale = GetLocale()
+	if locale == "koKR" then
+--@localization(locale="koKR", format="lua_additive_table", handle-unlocalized="ignore", escape-non-ascii=true)@
+	elseif locale == "deDE" then
+--@localization(locale="deDE", format="lua_additive_table", handle-unlocalized="ignore", escape-non-ascii=true)@
+	elseif locale == "esES" then
+--@localization(locale="esES", format="lua_additive_table", handle-unlocalized="ignore", escape-non-ascii=true)@
+	elseif locale == "zhTW" then
+--@localization(locale="zhTW", format="lua_additive_table", handle-unlocalized="ignore", escape-non-ascii=true)@
+	elseif locale == "zhCN" then
+--@localization(locale="zhCN", format="lua_additive_table", handle-unlocalized="ignore", escape-non-ascii=true)@
+	elseif locale == "ruRU" then
+--@localization(locale="ruRU", format="lua_additive_table", handle-unlocalized="ignore", escape-non-ascii=true)@
+	elseif locale == "frFR" then
+--@localization(locale="frFR", format="lua_additive_table", handle-unlocalized="ignore", escape-non-ascii=true)@
+	elseif locale == "esMX" then
+--@localization(locale="esMX", format="lua_additive_table", handle-unlocalized="ignore", escape-non-ascii=true)@
+	end
 end
-
-local _G = getfenv(0)
+-----------------------------------------------------------------------
 
 local BugGrabber = {}
 local frame = CreateFrame("Frame")
 
 local real_seterrorhandler = seterrorhandler
+
+-- Fetched from X-BugGrabber-Display in the TOC of a display addon.
+-- Should implement :FormatError(errorTable).
+local displayObjectName = nil
 
 local totalElapsed = 0
 local errorsSinceLastReset = 0
@@ -188,16 +118,16 @@ end
 
 local function slashHandler(index)
 	if not index or tostring(index) == "" then
-		print(USAGE:format(#slashCmdErrorList))
+		print(L.USAGE:format(#slashCmdErrorList))
 		return
 	end
 	if not tonumber(index) then
-		print(ERROR_INDEX)
+		print(L.ERROR_INDEX)
 		return
 	end
 	index = tonumber(index)
 	if not slashCmdErrorList[index] then
-		print(ERROR_UNKNOWN_INDEX:format(index))
+		print(L.ERROR_UNKNOWN_INDEX:format(index))
 		return
 	end
 	local err = slashCmdErrorList[index]
@@ -232,7 +162,7 @@ local function createSlashCmd()
 
 	slashCmdCreated = true
 	if not isBugGrabbedRegistered then
-		print(CMD_CREATED)
+		print(L.CMD_CREATED)
 	end
 end
 
@@ -582,7 +512,7 @@ function BugGrabber:Pause()
 	if paused then return end
 
 	if not BUGGRABBER_SUPPRESS_THROTTLE_CHAT then
-		print(string.format(BUGGRABBER_STOPPED, BUGGRABBER_ERRORS_PER_SEC_BEFORE_THROTTLE, BUGGRABBER_TIME_TO_RESUME))
+		print(L.BUGGRABBER_STOPPED:format(BUGGRABBER_ERRORS_PER_SEC_BEFORE_THROTTLE, BUGGRABBER_TIME_TO_RESUME))
 	end
 	self:UnregisterAddonActionEvents()
 	paused = true
@@ -593,7 +523,7 @@ function BugGrabber:Resume()
 	if not paused then return end
 
 	if not BUGGRABBER_SUPPRESS_THROTTLE_CHAT then
-		print(BUGGRABBER_RESUMING)
+		print(L.BUGGRABBER_RESUMING)
 	end
 	self:RegisterAddonActionEvents()
 	paused = nil
@@ -651,17 +581,17 @@ local function addonLoaded(addon)
 		local currentInterface = select(4, GetBuildInfo())
 		if type(currentInterface) ~= "number" then currentInterface = 0 end
 		if not hasDisplay and (not sv.stopnag or sv.stopnag < currentInterface) then
-			print(NO_DISPLAY_1)
-			print(NO_DISPLAY_2)
-			print(NO_DISPLAY_STOP)
+			print(L.NO_DISPLAY_1)
+			print(L.NO_DISPLAY_2)
+			print(L.NO_DISPLAY_STOP)
 			_G.SlashCmdList.BugGrabberStopNag = function()
-				print(STOP_NAG)
+				print(L.STOP_NAG)
 				sv.stopnag = currentInterface
 			end
 			_G.SLASH_BugGrabberStopNag1 = "/stopnag"
 		end
 	elseif (addon == "!Swatter" or (type(SwatterData) == "table" and SwatterData.enabled)) and Swatter then
-		print(string.gsub(ADDON_DISABLED, "%%s", "Swatter"))
+		print(L.ADDON_DISABLED:gsub("%%s", "Swatter"))
 		DisableAddOn("!Swatter")
 		SwatterData.enabled = nil
 		real_seterrorhandler(grabError)
@@ -684,7 +614,7 @@ end
 -- Now register for our needed events
 frame:SetScript("OnEvent", function(self, event, arg1, arg2)
 	if event == "ADDON_ACTION_BLOCKED" or event == "ADDON_ACTION_FORBIDDEN" then
-		grabError(ADDON_CALL_PROTECTED:format(event, arg1 or "?", arg2 or "?"))
+		grabError(L.ADDON_CALL_PROTECTED:format(event, arg1 or "?", arg2 or "?"))
 	elseif event == "ADDON_LOADED" then
 		addonLoaded(arg1 or "?")
 		if not callbacks then setupCallbacks() end
