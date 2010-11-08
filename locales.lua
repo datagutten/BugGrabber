@@ -1,4 +1,5 @@
-function BugGrabber:LoadTranslations(locale, L)
+local _, addon = ...
+function addon:LoadTranslations(locale, L)
 	if locale == "koKR" then
 --@localization(locale="koKR", format="lua_additive_table", handle-unlocalized="ignore", escape-non-ascii=true)@
 	elseif locale == "deDE" then
