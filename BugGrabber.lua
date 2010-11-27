@@ -147,8 +147,8 @@ local function createSlashCmd()
 	end
 end
 
-local function storeError(errorObject)
-	local db = addon:GetDB()
+function addon:StoreError(errorObject)
+	local db = self:GetDB()
 	db[#db + 1] = errorObject
 	-- Save only the last <limit> errors (otherwise the SV gets too big)
 	if #db > BugGrabberDB.limit then
