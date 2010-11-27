@@ -213,7 +213,7 @@ local function saveError(message, errorType)
 	-- If the error was not found in the current session, append it to the
 	-- database.
 	if not found then
-		storeError(oe)
+		addon:StoreError(oe)
 	end
 
 	-- Trigger event.
