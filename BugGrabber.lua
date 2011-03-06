@@ -1,15 +1,15 @@
 ﻿--
 -- $Id$
 --
--- The BugSack and BugGrabber team is:
+-- The BugSack and !BugGrabber team is:
 -- Current Developer: Rabbit
 -- Past Developers: Rowne, Ramble, industrial, Fritti, kergoth, ckknight
 -- Testers: Ramble, Sariash
 --
 --[[
 
-BugGrabber, World of Warcraft addon that catches errors and formats them with a debug stack.
-Copyright (C) 2008 The BugGrabber Team
+!BugGrabber, World of Warcraft addon that catches errors and formats them with a debug stack.
+Copyright (C) 2011 The !BugGrabber Team
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -28,6 +28,29 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 ]]
 
 -----------------------------------------------------------------------
+-- Check if we already exist in the global space
+-- If we do - bail out early, there's no version checks.
+if _G.BugGrabber then return end
+
+-----------------------------------------------------------------------
+-- If we're embedded we create a .BugGrabber object on the addons
+-- table, unless we find a standalone !BugGrabber addon.
+
+local bugGrabberParentAddon, parentAddonTable = ...
+local STANDALONE_NAME = "!BugGrabber"
+if bugGrabberParentAddon ~= STANDALONE_NAME then
+	-- We're running embedded.
+	for i = 1, GetNumAddOns() do
+		local name, _, _, enabled = GetAddOnInfo(i)
+		if name == STANDALONE_NAME and enabled then
+			return -- Bail out
+		end
+	end
+end
+if not parentAddonTable.BugGrabber then parentAddonTable.BugGrabber = {} end
+local addon = parentAddonTable.BugGrabber
+
+-----------------------------------------------------------------------
 -- Global config variables
 
 MAX_BUGGRABBER_ERRORS = 1000
@@ -41,26 +64,21 @@ BUGGRABBER_SUPPRESS_THROTTLE_CHAT = nil
 -----------------------------------------------------------------------
 -- Localization
 local L = {
-	NO_DISPLAY_1 = "|cffff4411You seem to be running !BugGrabber with no display addon to go along with it. Although !BugGrabber provides a slash command for accessing in-game errors, a display addon can help you manage these errors in a more convenient way.|r",
-	NO_DISPLAY_2 = "|cffff4411The standard !BugGrabber display is called |r|cff44ff44BugSack|r|cffff4411, and can probably be found on the same site where you found !BugGrabber.|r",
-	NO_DISPLAY_STOP = "|cffff4411If you don't want to be reminded about this again, please run |cff44ff44/stopnag|r|cffff4411.|r",
-	STOP_NAG = "|cffff4411!BugGrabber will not nag about missing |r|cff44ff44BugSack|r|cffff4411 again until next patch.|r",
-	CMD_CREATED = "An error has been detected, use /buggrabber to print it.",
-	USAGE = "Usage: /buggrabber <1-%d>.",
-	ERROR_INDEX = "The provided index must be a number.",
-	ERROR_UNKNOWN_INDEX = "The index %d does not exist in the load error table.",
-	STARTUP_ERRORS = "There were %d startup errors:",
-	STARTUP_ERRORS_MANY = "There were %d startup errors, please use /buggrabber <number> to print them.",
-	UNIQUE_CAPTURE = "BugGrabber captured a unique error:\n%s\n---",
+	NO_DISPLAY_1 = "|cffffff00You seem to be running !BugGrabber with no display addon to go along with it. Although !BugGrabber provides a slash command for accessing in-game errors, a display addon can help you manage these errors in a more convenient way.|r",
+	NO_DISPLAY_2 = "|cffffff00The standard !BugGrabber display is called |r|cff44ff44BugSack|r|cffffff00, and can probably be found on the same site where you found !BugGrabber.|r",
+	NO_DISPLAY_STOP = "|cffffff00If you don't want to be reminded about this again, please run |cff44ff44/stopnag|r|cffffff00.|r",
+	STOP_NAG = "|cffffff00!BugGrabber will not nag about missing |r|cff44ff44BugSack|r|cffffff00 again until next patch.|r",
+	CMD_CREATED = "|cffffff00An error has been detected, use /buggrabber to print it.|r",
+	USAGE = "|cffffff00Usage: /buggrabber <1-%d>.|r",
+	ERROR_INDEX = "|cffffff00The provided index must be a number.|r",
+	ERROR_UNKNOWN_INDEX = "|cffffff00The index %d does not exist in the load error table.|r",
 	ADDON_CALL_PROTECTED = "[%s] AddOn '%s' tried to call the protected function '%s'.",
 	ADDON_CALL_PROTECTED_MATCH = "^%[(.*)%] (AddOn '.*' tried to call the protected function '.*'.)$",
-	ADDON_DISABLED = "|cffffff7fBugGrabber|r and |cffffff7f%s|r cannot coexist together. |cffffff7f%s|r has been disabled because of this. If you want to, you may exit out, disable |cffffff7fBugGrabber|r and reenable |cffffff7f%s|r.",
-	BUGGRABBER_STOPPED = "|cffffff7fBugGrabber|r has stopped capturing errors, since it has captured more than %d errors per second. Capturing will resume in %d seconds.",
-	BUGGRABBER_RESUMING = "|cffffff7fBugGrabber|r is capturing errors again.",
+	ADDON_DISABLED = "|cffffff00!BugGrabber and %s cannot coexist; %s has been forcefully disabled. If you want to, you may log out, disable !BugGrabber, and enable %s|r.",
+	BUGGRABBER_STOPPED = "|cffffff00!BugGrabber has stopped capturing errors since it has captured more than %d errors per second. Capturing will resume in %d seconds.|r",
+	BUGGRABBER_RESUMING = "|cffffff00!BugGrabber is capturing errors again.|r",
 }
 -----------------------------------------------------------------------
-
-local _, addon = ...
 
 local frame = CreateFrame("Frame")
 
@@ -522,8 +540,13 @@ local function createSwatter()
 end
 
 local function addonLoaded(msg)
-	if msg == "!BugGrabber" then
+	if msg == bugGrabberParentAddon then
 		real_seterrorhandler(grabError)
+
+		-- XXX Do we need to do anything about these SVs
+		-- XXX if we are embedded? The table will just be a global
+		-- XXX standard Lua table if not, right? Should be fine.
+		-- XXX Things just won't get saved.
 
 		-- Persist defaults and make sure we have sane SavedVariables
 		if type(BugGrabberDB) ~= "table" then BugGrabberDB = {} end
@@ -567,7 +590,8 @@ local function addonLoaded(msg)
 			end
 		end
 
-		if not hasDisplay then
+		-- Only warn about missing display if we're running standalone.
+		if not hasDisplay and bugGrabberParentAddon == STANDALONE_NAME then
 			local currentInterface = select(4, GetBuildInfo())
 			if type(currentInterface) ~= "number" then currentInterface = 0 end
 			if not sv.stopnag or sv.stopnag < currentInterface then
@@ -582,7 +606,7 @@ local function addonLoaded(msg)
 			end
 		end
 	elseif (msg == "!Swatter" or (type(SwatterData) == "table" and SwatterData.enabled)) and Swatter then
-		print(L.ADDON_DISABLED:gsub("%%s", "Swatter"))
+		print(L.ADDON_DISABLED:format("Swatter", "Swatter", "Swatter"))
 		DisableAddOn("!Swatter")
 		SwatterData.enabled = nil
 		real_seterrorhandler(grabError)
