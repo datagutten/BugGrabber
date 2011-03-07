@@ -39,12 +39,9 @@ if _G.BugGrabber then return end
 local bugGrabberParentAddon, parentAddonTable = ...
 local STANDALONE_NAME = "!BugGrabber"
 if bugGrabberParentAddon ~= STANDALONE_NAME then
-	-- We're running embedded.
-	for i = 1, GetNumAddOns() do
-		local name, _, _, enabled = GetAddOnInfo(i)
-		if name == STANDALONE_NAME and enabled then
-			return -- Bail out
-		end
+	local _, _, _, enabled = GetAddOnInfo(STANDALONE_NAME)
+	if enabled then
+		return -- Bail out
 	end
 end
 if not parentAddonTable.BugGrabber then parentAddonTable.BugGrabber = {} end
