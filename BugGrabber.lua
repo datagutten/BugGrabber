@@ -61,19 +61,17 @@ BUGGRABBER_SUPPRESS_THROTTLE_CHAT = nil
 -----------------------------------------------------------------------
 -- Localization
 local L = {
-	NO_DISPLAY_1 = "|cffffff00You seem to be running !BugGrabber with no display addon to go along with it. Although !BugGrabber provides a slash command for accessing in-game errors, a display addon can help you manage these errors in a more convenient way.|r",
-	NO_DISPLAY_2 = "|cffffff00The standard !BugGrabber display is called |r|cff44ff44BugSack|r|cffffff00, and can probably be found on the same site where you found !BugGrabber.|r",
-	NO_DISPLAY_STOP = "|cffffff00If you don't want to be reminded about this again, please run |cff44ff44/stopnag|r|cffffff00.|r",
-	STOP_NAG = "|cffffff00!BugGrabber will not nag about missing |r|cff44ff44BugSack|r|cffffff00 again until next patch.|r",
-	CMD_CREATED = "|cffffff00An error has been detected, use /buggrabber to print it.|r",
-	USAGE = "|cffffff00Usage: /buggrabber <1-%d>.|r",
-	ERROR_INDEX = "|cffffff00The provided index must be a number.|r",
-	ERROR_UNKNOWN_INDEX = "|cffffff00The index %d does not exist in the load error table.|r",
 	ADDON_CALL_PROTECTED = "[%s] AddOn '%s' tried to call the protected function '%s'.",
 	ADDON_CALL_PROTECTED_MATCH = "^%[(.*)%] (AddOn '.*' tried to call the protected function '.*'.)$",
-	ADDON_DISABLED = "|cffffff00!BugGrabber and %s cannot coexist; %s has been forcefully disabled. If you want to, you may log out, disable !BugGrabber, and enable %s|r.",
-	BUGGRABBER_STOPPED = "|cffffff00!BugGrabber has stopped capturing errors since it has captured more than %d errors per second. Capturing will resume in %d seconds.|r",
+	ADDON_DISABLED = "|cffffff00!BugGrabber and %s cannot coexist; %s has been forcefully disabled. If you want to, you may log out, disable !BugGrabber, and enable %s.|r",
 	BUGGRABBER_RESUMING = "|cffffff00!BugGrabber is capturing errors again.|r",
+	BUGGRABBER_STOPPED = "|cffffff00!BugGrabber has stopped capturing errors since it has captured more than %d errors per second. Capturing will resume in %d seconds.|r",
+	CMD_CREATED = "|cffffff00An error has been detected, use /buggrabber to print it.|r",
+	NO_DISPLAY_1 = "|cffffff00You seem to be running !BugGrabber with no display addon to go along with it. Although a slash command is provided for accessing error reports, a display can help you manage these errors in a more convenient way.|r",
+	NO_DISPLAY_2 = "|cffffff00The standard display is called BugSack, and can probably be found on the same site where you found !BugGrabber.|r",
+	NO_DISPLAY_STOP = "|cffffff00If you don't want to be reminded about this again, run /stopnag.|r",
+	STOP_NAG = "|cffffff00!BugGrabber will not nag about missing a display addon again until next patch.|r",
+	USAGE = "|cffffff00Usage: /buggrabber <1-%d>.|r",
 }
 -----------------------------------------------------------------------
 
@@ -113,21 +111,12 @@ local function triggerEvent(...)
 end
 
 local function slashHandler(index)
-	if not index or tostring(index) == "" then
+	index = tonumber(index)
+	local err = type(index) == "number" and slashCmdErrorList[index] or nil
+	if not index or not err or type(err) ~= "table" or (type(err.message) ~= "string" and type(err.message) ~= "table") then
 		print(L.USAGE:format(#slashCmdErrorList))
 		return
 	end
-	if not tonumber(index) then
-		print(L.ERROR_INDEX)
-		return
-	end
-	index = tonumber(index)
-	if not slashCmdErrorList[index] then
-		print(L.ERROR_UNKNOWN_INDEX:format(index))
-		return
-	end
-	local err = slashCmdErrorList[index]
-	if type(err) ~= "table" or (type(err.message) ~= "string" and type(err.message) ~= "table") then return end
 	local found = nil
 	if displayObjectName and _G[displayObjectName] then
 		local display = _G[displayObjectName]
@@ -145,9 +134,15 @@ local function slashHandler(index)
 	end
 end
 
+local lastTimeWePrintedHelp = 0
 local function createSlashCmd()
+	local t = GetTime()
+	if t > lastTimeWePrintedHelp + 30 and not isBugGrabbedRegistered then
+		print(L.CMD_CREATED)
+		lastTimeWePrintedHelp = t
+	end
 	if slashCmdCreated then return end
-	local name = "BUGGRABBERCMD"
+	local name = nil
 	local counter = 0
 	repeat
 		name = "BUGGRABBERCMD"..tostring(counter)
@@ -155,11 +150,7 @@ local function createSlashCmd()
 	until not _G.SlashCmdList[name] and not _G["SLASH_"..name.."1"]
 	_G.SlashCmdList[name] = slashHandler
 	_G["SLASH_"..name.."1"] = "/buggrabber"
-
 	slashCmdCreated = true
-	if not isBugGrabbedRegistered then
-		print(L.CMD_CREATED)
-	end
 end
 
 function addon:StoreError(errorObject)
@@ -171,73 +162,71 @@ function addon:StoreError(errorObject)
 	end
 end
 
-local function saveError(message, errorType)
-	-- Start with the date, time and session
-	local oe = {}
-	oe.message = message .. "\n  ---"
-	oe.session = BugGrabberDB and BugGrabberDB.session or 0
-	oe.time = date("%Y/%m/%d %H:%M:%S")
-	oe.type = errorType
-	oe.counter = 1
-
-	-- WoW crashes when strings > 983 characters are stored in the
-	-- SavedVariables file, so make sure we don't exceed that limit.
-	if oe.message:len() > 980 then
-		local m = oe.message
-		oe.message = {}
-		local maxChunks, chunks = 5, 0
-		while m:len() > 980 and chunks <= maxChunks do
-			local q
-			q, m = m:sub(1, 980), m:sub(981)
-			oe.message[#oe.message + 1] = q
-			chunks = chunks + 1
+local function stringToTable(input)
+	if input:len() > 980 then
+		local wholeString = input
+		local converted = {}
+		while wholeString:len() > 980 and #converted < 6 do
+			converted[#converted + 1] = wholeString:sub(1, 980)
+			wholeString = wholeString:sub(981)
 		end
-		if m:len() > 980 then m = m:sub(1, 980) end
-		oe.message[#oe.message + 1] = m
+		if wholeString:len() > 980 then wholeString = wholeString:sub(1, 980) end
+		converted[#converted + 1] = wholeString
+		return converted
+	else
+		return input
 	end
+end
 
-	-- Insert the error into the correct database if it's not there already.
-	-- If it is, just increment the counter.
-	local found = false
-	local db = addon:GetDB()
-	local oe_message = oe.message
-	if type(oe_message) == "table" then
-		oe_message = oe_message[1]
-	end
-	for i, err in next, db do
-		local err_message = err.message
-		if type(err_message) == "table" then
-			err_message = err_message[1]
-		end
-		if err_message == oe_message and err.session == oe.session then
-			-- This error already exists in the current session, just increment
-			-- the counter on it.
-			if type(err.counter) ~= "number" then
-				err.counter = 1
+local function saveError(errorMessage, errorType, errorLocals)
+	local errorObject = nil
+
+	local body = stringToTable(errorMessage)
+	local session = BugGrabberDB and BugGrabberDB.session or 0
+
+	-- Insert the error into the correct database if it's not there
+	-- already. If it is, just increment the counter.
+	local found = nil
+	local signature = type(body) == "table" and body[1] or body
+	for i, err in next, addon:GetDB() do
+		if err.session == session then
+			local errSignature = type(err.message) == "table" and err.message[1] or err.message
+			if errSignature == signature then
+				-- This error already exists in the current session,
+				-- just increment the counter on it.
+				if type(err.counter) ~= "number" then
+					err.counter = 1
+				end
+				err.counter = err.counter + 1
+
+				errorObject = err
+
+				found = true
+				break
 			end
-			err.counter = err.counter + 1
-
-			oe = nil
-			oe = err
-
-			found = true
-			break
 		end
 	end
 
-	-- If the error was not found in the current session, append it to the
-	-- database.
-	if not found then
-		addon:StoreError(oe)
+	if not errorObject then
+		-- Error was not in the DB
+		errorObject = {
+			message = body,
+			locals = stringToTable(errorLocals),
+			session = session,
+			time = date("%Y/%m/%d %H:%M:%S"),
+			type = errorType,
+			counter = 1,
+		}
+		addon:StoreError(errorObject)
 	end
 
 	-- Trigger event.
 	if not looping then
 		local e = "BugGrabber_" .. (errorType == "event" and "Event" or "Bug") .. "Grabbed" .. (found and "Again" or "")
-		triggerEvent(e, oe)
+		triggerEvent(e, errorObject)
 
 		if not found then
-			slashCmdErrorList[#slashCmdErrorList + 1] = oe
+			slashCmdErrorList[#slashCmdErrorList + 1] = errorObject
 			createSlashCmd()
 		end
 	end
@@ -403,12 +392,9 @@ local function grabError(err)
 	errorsSinceLastReset = errorsSinceLastReset + 1
 
 	local locals = debuglocals(real and 4 or 3)
-	if locals then
-		errmsg = errmsg .. "\nLocals:|r\n" .. locals
-	end
 
 	-- Store the error
-	saveError(errmsg, errorType)
+	saveError(errmsg, errorType, locals)
 end
 
 local function onUpdateFunc(self, elapsed)
