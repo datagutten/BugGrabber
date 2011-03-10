@@ -168,7 +168,7 @@ end
 -- XXX And don't combine the message with the stack, have them
 -- XXX as separate properties on the error object.
 local function stringToTable(input)
-	if input:len() > 980 then
+	if type(input) == "string" and input:len() > 980 then
 		local wholeString = input
 		local converted = {}
 		while wholeString:len() > 980 and #converted < 6 do
