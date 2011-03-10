@@ -78,6 +78,9 @@ local L = {
 local frame = CreateFrame("Frame")
 
 local real_seterrorhandler = seterrorhandler
+if Swatter and Swatter.origHandler then
+	real_seterrorhandler = Swatter.origHandler
+end
 
 -- Fetched from X-BugGrabber-Display in the TOC of a display addon.
 -- Should implement :FormatError(errorTable).
@@ -126,12 +129,14 @@ local function slashHandler(index)
 		end
 	end
 	if not found then
-		local m = err.message
-		if type(m) == "table" then
-			m = table.concat(m, "")
-		end
-		print(tostring(index) .. ". " .. m)
+		print(addon:GetChatLink(err))
 	end
+end
+
+local chatLinkFormat = "|Hbuggrabber:%s|h|cffff0000[Error %s]|r|h"
+function addon:GetChatLink(errorObject)
+	local tableId = tostring(errorObject):sub(8)
+	return chatLinkFormat:format(tableId, tableId)
 end
 
 local lastTimeWePrintedHelp = 0
@@ -162,6 +167,9 @@ function addon:StoreError(errorObject)
 	end
 end
 
+-- XXX Stop using this for the stacktrace in next major version
+-- XXX And don't combine the message with the stack, have them
+-- XXX as separate properties on the error object.
 local function stringToTable(input)
 	if input:len() > 980 then
 		local wholeString = input
@@ -586,6 +594,28 @@ local function addonLoaded(msg)
 					sv.stopnag = currentInterface
 				end
 				_G.SLASH_BugGrabberStopNag1 = "/stopnag"
+			end
+		end
+
+		local tableToString = "table: %s"
+		local origSetItemRef = _G.SetItemRef
+		_G.SetItemRef = function(link, ...)
+			local tableId = link:match("^buggrabber:(%x+)")
+			if not tableId then
+				return origSetItemRef(link, ...)
+			end
+			local fullId = tableToString:format(tableId)
+			-- |db| is local inside ADDON_LOADED
+			local found = nil
+			for i, err in next, db do
+				if tostring(err) == fullId then
+					print(type(err.message) == "string" and err.message or table.concat(err.message, ""))
+					found = true
+					break
+				end
+			end
+			if not found then
+				print(fullId .. " not found.")
 			end
 		end
 	elseif (msg == "!Swatter" or (type(SwatterData) == "table" and SwatterData.enabled)) and Swatter then
