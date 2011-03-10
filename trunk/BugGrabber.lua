@@ -66,7 +66,7 @@ local L = {
 	ADDON_DISABLED = "|cffffff00!BugGrabber and %s cannot coexist; %s has been forcefully disabled. If you want to, you may log out, disable !BugGrabber, and enable %s.|r",
 	BUGGRABBER_RESUMING = "|cffffff00!BugGrabber is capturing errors again.|r",
 	BUGGRABBER_STOPPED = "|cffffff00!BugGrabber has stopped capturing errors since it has captured more than %d errors per second. Capturing will resume in %d seconds.|r",
-	CMD_CREATED = "|cffffff00An error has been detected, use /buggrabber to print it.|r",
+	ERROR_DETECTED = "%s |cffffff00captured, click the link for more information.|r",
 	NO_DISPLAY_1 = "|cffffff00You seem to be running !BugGrabber with no display addon to go along with it. Although a slash command is provided for accessing error reports, a display can help you manage these errors in a more convenient way.|r",
 	NO_DISPLAY_2 = "|cffffff00The standard display is called BugSack, and can probably be found on the same site where you found !BugGrabber.|r",
 	NO_DISPLAY_STOP = "|cffffff00If you don't want to be reminded about this again, run /stopnag.|r",
@@ -129,7 +129,7 @@ local function slashHandler(index)
 		end
 	end
 	if not found then
-		print(addon:GetChatLink(err))
+		print(type(err.message) == "string" and err.message or table.concat(err.message, ""))
 	end
 end
 
@@ -139,12 +139,9 @@ function addon:GetChatLink(errorObject)
 	return chatLinkFormat:format(tableId, tableId)
 end
 
-local lastTimeWePrintedHelp = 0
 local function createSlashCmd()
-	local t = GetTime()
-	if t > lastTimeWePrintedHelp + 30 and not isBugGrabbedRegistered then
-		print(L.CMD_CREATED)
-		lastTimeWePrintedHelp = t
+	if not isBugGrabbedRegistered then
+		print(L.ERROR_DETECTED:format(addon:GetChatLink(slashCmdErrorList[#slashCmdErrorList])))
 	end
 	if slashCmdCreated then return end
 	local name = nil
