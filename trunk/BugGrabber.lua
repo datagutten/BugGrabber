@@ -1,4 +1,4 @@
-﻿--
+--
 -- $Id$
 --
 -- The BugSack and !BugGrabber team is:
@@ -78,9 +78,13 @@ local L = {
 local frame = CreateFrame("Frame")
 
 local real_seterrorhandler = seterrorhandler
+
+-- Swatter leaves seterrorhandler, so it's not a problem if it's loaded first
+--[=[
 if Swatter and Swatter.origHandler then
 	real_seterrorhandler = Swatter.origHandler
 end
+--]=]
 
 -- Fetched from X-BugGrabber-Display in the TOC of a display addon.
 -- Should implement :FormatError(errorTable).
@@ -184,6 +188,12 @@ local function stringToTable(input)
 end
 
 local function saveError(errorMessage, errorType, errorLocals)
+
+    -- When BugGrabber is embeded BugGrabberDB is set when the parent add-on is loaded
+    if not BugGrabberDB then
+        return
+    end
+
 	local errorObject = nil
 
 	local body = stringToTable(errorMessage)
