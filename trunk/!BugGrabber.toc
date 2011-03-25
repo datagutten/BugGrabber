@@ -1,6 +1,6 @@
 ﻿## Interface: 40000
 ## Title: BugGrabber
-## Version: 2.2
+## Version: 3.0-alpha
 ## Notes: Grabs bugs for the bug sack.
 ## Author: Rabbit
 ## X-Credits: Rowne, Ramble, kergoth, ckknight, Fritti
