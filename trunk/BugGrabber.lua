@@ -81,13 +81,27 @@ local L = {
 --
 
 local frame = CreateFrame("Frame")
-frame.count = 0
 
--- Fetched from X-BugGrabber-Display in the TOC of a display addon.
 -- Should implement :FormatError(errorTable).
 local displayObjectName = nil
+for i = 1, GetNumAddOns() do
+	local meta = GetAddOnMetadata(i, "X-BugGrabber-Display")
+	if meta then
+		local enabled = select(4, GetAddOnInfo(i))
+		if enabled then
+			displayObjectName = meta
+			break
+		end
+	end
+end
 
-local db = nil -- Shorthand to BugGrabberDB.errors
+-- Shorthand to BugGrabberDB.errors
+local db = nil
+
+-- Errors we catch during the addon loading process, before our saved
+-- variables are available. After the SVs have loaded, these will be
+-- inserted into the proper DB.
+local loadErrors = {}
 
 local paused = nil
 local isBugGrabbedRegistered = nil
@@ -109,8 +123,10 @@ local function setupCallbacks()
 		function callbacks:OnUnused(target, eventname)
 			if eventname == "BugGrabber_BugGrabbed" then isBugGrabbedRegistered = nil end
 		end
+		setupCallbacks = nil
 	end
 end
+setupCallbacks()
 
 local function triggerEvent(...)
 	if not callbacks then setupCallbacks() end
@@ -120,6 +136,18 @@ end
 -----------------------------------------------------------------------
 -- Utility
 --
+
+local function fetchFromDatabase(database, target)
+	for i, err in next, database do
+		if err.message == target then
+			-- This error already exists
+			err.counter = err.counter + 1
+			err.session = addon:GetSessionId()
+
+			return table.remove(database, i)
+		end
+	end
+end
 
 local function printErrorObject(err)
 	local found = nil
@@ -318,16 +346,9 @@ do
 		-- already. If it is, just increment the counter.
 		local found = nil
 		if db then
-			for i, err in next, db do
-				if err.message == sanitizedMessage then
-					-- This error already exists
-					err.counter = err.counter + 1
-					err.session = addon:GetSessionId()
-
-					found = table.remove(db, i)
-					break
-				end
-			end
+			found = fetchFromDatabase(db, sanitizedMessage)
+		else
+			found = fetchFromDatabase(loadErrors, sanitizedMessage)
 		end
 
 		frame.count = frame.count + 1
@@ -370,11 +391,14 @@ end
 --
 
 function addon:StoreError(errorObject)
-	if not db then return end
-	db[#db + 1] = errorObject
-	-- Save only the last MAX_BUGGRABBER_ERRORS errors (otherwise the SV gets too big)
-	if #db > MAX_BUGGRABBER_ERRORS then
-		table.remove(db, 1)
+	if db then
+		db[#db + 1] = errorObject
+		-- Save only the last MAX_BUGGRABBER_ERRORS errors (otherwise the SV gets too big)
+		if #db > MAX_BUGGRABBER_ERRORS then
+			table.remove(db, 1)
+		end
+	else
+		loadErrors[#loadErrors + 1] = errorObject
 	end
 end
 
@@ -399,8 +423,8 @@ end
 
 function addon:GetErrorID(errorObject) return tostring(errorObject):sub(8) end
 function addon:Reset() if BugGrabberDB then wipe(BugGrabberDB.errors) end end
-function addon:GetDB() return db end
-function addon:GetSessionId() return BugGrabberDB and BugGrabberDB.session or 0 end
+function addon:GetDB() return db or loadErrors end
+function addon:GetSessionId() return BugGrabberDB and BugGrabberDB.session or -1 end
 function addon:IsPaused() return paused end
 
 function addon:HandleBugLink(player, id, link)
@@ -414,7 +438,7 @@ end
 -- Initialization
 --
 
-local function initBugGrabber()
+local function initDatabase()
 	-- Persist defaults and make sure we have sane SavedVariables
 	if type(BugGrabberDB) ~= "table" then BugGrabberDB = {} end
 	local sv = BugGrabberDB
@@ -431,31 +455,21 @@ local function initBugGrabber()
 		table.remove(db, 1)
 	end
 
+	-- If there were any load errors, we need to iterate them and
+	-- insert the relevant ones into our SV DB.
+	for i, err in next, loadErrors do
+		err.session = sv.session -- Update the session ID directly
+		local exists = fetchFromDatabase(db, err.message)
+		addon:StoreError(exists or err)
+	end
+	wipe(loadErrors)
+
 	if type(sv.lastSanitation) ~= "number" or sv.lastSanitation ~= 3 then
 		for i, v in next, db do
 			if type(v.message) == "table" then table.remove(db, i) end
 		end
 		sv.lastSanitation = 3
 	end
-
-	-- Flood protection
-	local totalElapsed = 0
-	frame:SetScript("OnUpdate", function(self, elapsed)
-		totalElapsed = totalElapsed + elapsed
-		if totalElapsed > 1 then
-			if not paused then
-				-- Seems like we're getting more errors/sec than we want.
-				if self.count > BUGGRABBER_ERRORS_PER_SEC_BEFORE_THROTTLE then
-					pause()
-				end
-				self.count = 0
-				totalElapsed = 0
-			elseif totalElapsed > BUGGRABBER_TIME_TO_RESUME then
-				totalElapsed = 0
-				resume()
-			end
-		end
-	end)
 
 	-- load locales
 	if type(addon.LoadTranslations) == "function" then
@@ -464,17 +478,6 @@ local function initBugGrabber()
 			addon:LoadTranslations(locale, L)
 		end
 		addon.LoadTranslations = nil
-	end
-
-	for i = 1, GetNumAddOns() do
-		local meta = GetAddOnMetadata(i, "X-BugGrabber-Display")
-		if meta then
-			local enabled = select(4, GetAddOnInfo(i))
-			if enabled then
-				displayObjectName = meta
-				break
-			end
-		end
 	end
 
 	-- Only warn about missing display if we're running standalone.
@@ -493,23 +496,7 @@ local function initBugGrabber()
 		end
 	end
 
-	-- Set up the ItemRef hook that allow us to link bugs.
-	local origSetItemRef = _G.SetItemRef
-	_G.SetItemRef = function(link, ...)
-		local player, tableId = link:match("^buggrabber:(%a+):(%x+)")
-		if not player or not tableId then return origSetItemRef(link, ...) end
-		if IsModifiedClick("CHATLINK") then
-			ChatEdit_InsertLink(link)
-		else
-			addon:HandleBugLink(player, tableId, link, ...)
-		end
-	end
-
-	-- Set up slash command
-	_G.SlashCmdList.BugGrabber = slashHandler
-	_G.SLASH_BugGrabber1 = "/buggrabber"
-
-	initBugGrabber = nil
+	initDatabase = nil
 end
 
 do
@@ -529,11 +516,13 @@ do
 	function frame:ADDON_LOADED(event, msg)
 		if not callbacks then setupCallbacks() end
 		if msg == "Stubby" then createSwatter() end
-		-- If we're running embedded, just init as soon as possible,
-		-- but if we are running separately we init when !BugGrabber
-		-- loads so that our SVs are available.
-		if bugGrabberParentAddon ~= STANDALONE_NAME or msg == STANDALONE_NAME then
-			initBugGrabber()
+		if initDatabase then
+			-- If we're running embedded, just init as soon as possible,
+			-- but if we are running separately we init when !BugGrabber
+			-- loads so that our SVs are available.
+			if bugGrabberParentAddon ~= STANDALONE_NAME or msg == bugGrabberParentAddon then
+				initDatabase()
+			end
 		end
 
 		if not swatterDisabled and _G.Swatter and not _G.Swatter.isFake then
@@ -562,7 +551,10 @@ do
 	end
 end
 
-function frame:PLAYER_LOGIN() real_seterrorhandler(grabError) end
+function frame:PLAYER_LOGIN()
+	if not callbacks then setupCallbacks() end
+	real_seterrorhandler(grabError)
+end
 function frame:ADDON_ACTION_FORBIDDEN(event, addonName, addonFunc)
 	grabError(L.ADDON_CALL_PROTECTED:format(event, addonName or "<name>", addonFunc or "<func>"))
 end
@@ -575,5 +567,44 @@ registerAddonActionEvents()
 real_seterrorhandler(grabError)
 function seterrorhandler() --[[ noop ]] end
 
+do
+	-- Flood protection
+	local totalElapsed = 0
+	frame.count = 0
+	frame:SetScript("OnUpdate", function(self, elapsed)
+		totalElapsed = totalElapsed + elapsed
+		if totalElapsed > 1 then
+			if not paused then
+				-- Seems like we're getting more errors/sec than we want.
+				if self.count > BUGGRABBER_ERRORS_PER_SEC_BEFORE_THROTTLE then
+					pause()
+				end
+				self.count = 0
+				totalElapsed = 0
+			elseif totalElapsed > BUGGRABBER_TIME_TO_RESUME then
+				totalElapsed = 0
+				resume()
+			end
+		end
+	end)
+end
+
+do
+	-- Set up the ItemRef hook that allow us to link bugs.
+	local origSetItemRef = _G.SetItemRef
+	_G.SetItemRef = function(link, ...)
+		local player, tableId = link:match("^buggrabber:(%a+):(%x+)")
+		if not player or not tableId then return origSetItemRef(link, ...) end
+		if IsModifiedClick("CHATLINK") then
+			ChatEdit_InsertLink(link)
+		else
+			addon:HandleBugLink(player, tableId, link, ...)
+		end
+	end
+end
+
+-- Set up slash command
+_G.SlashCmdList.BugGrabber = slashHandler
+_G.SLASH_BugGrabber1 = "/buggrabber"
 _G.BugGrabber = addon
 
