@@ -318,7 +318,7 @@ do
 		-- since wow crashes with strings > 983 chars and I don't want to split
 		-- stuff, it's so hacky :/
 		for token in dump:gmatch("\\([^\\]+)%.lua") do
-			dump = dump:gsub(token:gsub("([%.%-%(%)%+])", "%%%1") .. "\\", "..\\")
+			dump = dump:gsub(escapeCache[token] .. "\\", "..\\")
 		end
 		dump = dump:gsub("<function> defined", "<func>")
 		dump = dump:gsub("{%s+}", "{}")
