@@ -81,6 +81,7 @@ local L = {
 --
 
 local frame = CreateFrame("Frame")
+frame.count = 0
 
 -- Fetched from X-BugGrabber-Display in the TOC of a display addon.
 -- Should implement :FormatError(errorTable).
@@ -275,7 +276,7 @@ do
 		dump = dump:gsub("Interface\\", "")
 		dump = dump:gsub("AddOns\\", "")
 		dump = dump:gsub("%.%.%.[^\\]+\\", "")
-		dump = dump:gsub("^%[C%]:.*$", "<in C code>")
+		dump = dump:gsub("%[C%]:.-\n", "<in C code>\n")
 		dump = dump:gsub("%<?%[string (\".-\")%](:%d+)%>?", "<string>:%1%2")
 		dump = dump:gsub("[`']", "\"")
 		return dump
@@ -430,9 +431,15 @@ local function initBugGrabber()
 		table.remove(db, 1)
 	end
 
+	if type(sv.lastSanitation) ~= "number" or sv.lastSanitation ~= 3 then
+		for i, v in next, db do
+			if type(v.message) == "table" then table.remove(db, i) end
+		end
+		sv.lastSanitation = 3
+	end
+
 	-- Flood protection
 	local totalElapsed = 0
-	frame.count = 0
 	frame:SetScript("OnUpdate", function(self, elapsed)
 		totalElapsed = totalElapsed + elapsed
 		if totalElapsed > 1 then
@@ -501,6 +508,8 @@ local function initBugGrabber()
 	-- Set up slash command
 	_G.SlashCmdList.BugGrabber = slashHandler
 	_G.SLASH_BugGrabber1 = "/buggrabber"
+
+	initBugGrabber = nil
 end
 
 do
@@ -516,14 +525,16 @@ do
 		}
 	end
 
-	local initFuncs = {
-		Stubby = createSwatter,
-		[bugGrabberParentAddon] = initBugGrabber,
-	}
 	local swatterDisabled = nil
 	function frame:ADDON_LOADED(event, msg)
 		if not callbacks then setupCallbacks() end
-		if initFuncs[msg] then initFuncs[msg]() end
+		if msg == "Stubby" then createSwatter() end
+		-- If we're running embedded, just init as soon as possible,
+		-- but if we are running separately we init when !BugGrabber
+		-- loads so that our SVs are available.
+		if bugGrabberParentAddon ~= STANDALONE_NAME or msg == STANDALONE_NAME then
+			initBugGrabber()
+		end
 
 		if not swatterDisabled and _G.Swatter and not _G.Swatter.isFake then
 			swatterDisabled = true
@@ -565,3 +576,4 @@ real_seterrorhandler(grabError)
 function seterrorhandler() --[[ noop ]] end
 
 _G.BugGrabber = addon
+
