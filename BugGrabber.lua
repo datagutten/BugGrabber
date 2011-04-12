@@ -275,25 +275,28 @@ do
 		return escaped
 	end })
 
-	local matchers = {
-		"\\([^\\]+)%.lua",       -- \Anything-except-backslashes.lua
-		"^([^\\]+)\\",           -- Start-of-the-line-until-first-backslash\
-		"(%a+%-%d%.?%d?)",       -- Anything-#.#, where .# is optional
-		"(Lib%u%a+%-?%d?%.?%d?)" -- LibXanything-#.#, where X is any capital letter and -#.# is optional
-	}
 	local tmp = {}
+	local function replacer(start, object, tail)
+		-- Have we matched this object before on the same line?
+		-- (another pattern could re-match a previous match...)
+		if tmp[object] then return end
+		local found = matchCache[object]
+		if found then
+			tmp[object] = true
+			return (start ~= 1 and start or "") .. object .. "-" .. found .. (type(tail) == "string" and tail or "")
+		end
+	end
+
+	local matchers = {
+		"(\\)([^\\]+)(%.lua)",       -- \Anything-except-backslashes.lua
+		"^()([^\\]+)(\\)",           -- Start-of-the-line-until-first-backslash\
+		"()(%a+%-%d%.?%d?)()",       -- Anything-#.#, where .# is optional
+		"()(Lib%u%a+%-?%d?%.?%d?)()" -- LibXanything-#.#, where X is any capital letter and -#.# is optional
+	}
 	function findVersions(line)
 		if not line or line:find("FrameXML\\") then return line end
 		for i, m in next, matchers do
-			for object in line:gmatch(m) do
-				if not tmp[object] then -- Have we matched this object before on the same line?
-					local found = matchCache[object]
-					if found then
-						line = line:gsub(escapeCache[object], object .. "-" .. found)
-					end
-					tmp[object] = true
-				end
-			end
+			line = line:gsub(m, replacer)
 		end
 		wipe(tmp)
 		return line
@@ -356,7 +359,7 @@ do
 		local errorObject = found
 
 		if not errorObject then
-			local stack = sanitizeStack(debugstack(4))
+			local stack = sanitizeStack(debugstack(3))
 
 			-- Scan for version numbers in the stack
 			for line in stack:gmatch("(.-)\n") do
@@ -591,14 +594,14 @@ end
 
 do
 	-- Set up the ItemRef hook that allow us to link bugs.
-	local origSetItemRef = _G.SetItemRef
-	_G.SetItemRef = function(link, ...)
+	local origHandler = _G.ChatFrame_OnHyperlinkShow
+	_G.ChatFrame_OnHyperlinkShow = function(chatFrame, link, ...)
 		local player, tableId = link:match("^buggrabber:(%a+):(%x+)")
-		if not player or not tableId then return origSetItemRef(link, ...) end
+		if not player or not tableId then return origHandler(chatFrame, link, ...) end
 		if IsModifiedClick("CHATLINK") then
 			ChatEdit_InsertLink(link)
 		else
-			addon:HandleBugLink(player, tableId, link, ...)
+			addon:HandleBugLink(player, tableId, link, chatFrame, ...)
 		end
 	end
 end
