@@ -52,12 +52,10 @@ local real_seterrorhandler = seterrorhandler
 -----------------------------------------------------------------------
 -- Global config variables
 --
-MAX_BUGGRABBER_ERRORS = 50
+MAX_BUGGRABBER_ERRORS = 1000
 
 -- If we get more errors than this per second, we stop all capturing
 BUGGRABBER_ERRORS_PER_SEC_BEFORE_THROTTLE = 10
-BUGGRABBER_TIME_TO_RESUME = 30
-BUGGRABBER_SUPPRESS_THROTTLE_CHAT = nil
 
 -----------------------------------------------------------------------
 -- Localization
@@ -66,8 +64,7 @@ local L = {
 	ADDON_CALL_PROTECTED = "[%s] AddOn '%s' tried to call the protected function '%s'.",
 	ADDON_CALL_PROTECTED_MATCH = "^%[(.*)%] (AddOn '.*' tried to call the protected function '.*'.)$",
 	ADDON_DISABLED = "|cffffff00!BugGrabber and %s cannot coexist; %s has been forcefully disabled. If you want to, you may log out, disable !BugGrabber, and enable %s.|r",
-	BUGGRABBER_RESUMING = "|cffffff00!BugGrabber is capturing errors again.|r",
-	BUGGRABBER_STOPPED = "|cffffff00!BugGrabber has stopped capturing errors since it has captured more than %d errors per second. Capturing will resume in %d seconds.|r",
+	BUGGRABBER_STOPPED = "|cffffff00There are too many errors in your UI. As a result, your game experience may be degraded. Disable or update the failing addons if you don't want to see this message again.|r",
 	ERROR_UNABLE = "|cffffff00!BugGrabber is unable to retrieve errors from other players by itself. Please install BugSack or a similar display addon that might give you this functionality.|r",
 	ERROR_DETECTED = "%s |cffffff00captured, click the link for more information.|r",
 	NO_DISPLAY_1 = "|cffffff00You seem to be running !BugGrabber with no display addon to go along with it. Although a slash command is provided for accessing error reports, a display can help you manage these errors in a more convenient way.|r",
@@ -174,28 +171,6 @@ end
 local function unregisterAddonActionEvents()
 	--frame:UnregisterEvent("ADDON_ACTION_BLOCKED")
 	--frame:UnregisterEvent("ADDON_ACTION_FORBIDDEN")
-end
-
-local function pause()
-	if paused then return end
-
-	if not BUGGRABBER_SUPPRESS_THROTTLE_CHAT then
-		print(L.BUGGRABBER_STOPPED:format(BUGGRABBER_ERRORS_PER_SEC_BEFORE_THROTTLE, BUGGRABBER_TIME_TO_RESUME))
-	end
-	unregisterAddonActionEvents()
-	paused = true
-	triggerEvent("BugGrabber_CapturePaused")
-end
-
-local function resume()
-	if not paused then return end
-
-	if not BUGGRABBER_SUPPRESS_THROTTLE_CHAT then
-		print(L.BUGGRABBER_RESUMING)
-	end
-	registerAddonActionEvents()
-	paused = nil
-	triggerEvent("BugGrabber_CaptureResumed")
 end
 
 -----------------------------------------------------------------------
@@ -578,17 +553,18 @@ do
 	frame:SetScript("OnUpdate", function(self, elapsed)
 		totalElapsed = totalElapsed + elapsed
 		if totalElapsed > 1 then
-			if not paused then
-				-- Seems like we're getting more errors/sec than we want.
-				if self.count > BUGGRABBER_ERRORS_PER_SEC_BEFORE_THROTTLE then
-					pause()
-				end
-				self.count = 0
-				totalElapsed = 0
-			elseif totalElapsed > BUGGRABBER_TIME_TO_RESUME then
-				totalElapsed = 0
-				resume()
+			-- Seems like we're getting more errors/sec than we want.
+			if self.count > BUGGRABBER_ERRORS_PER_SEC_BEFORE_THROTTLE then
+				print(L.BUGGRABBER_STOPPED)
+				unregisterAddonActionEvents()
+				real_seterrorhandler(function() --[[ noop ]] end)
+				paused = true
+				triggerEvent("BugGrabber_CapturePaused")
+				self:SetScript("OnUpdate", nil)
+				self:Hide()
 			end
+			self.count = 0
+			totalElapsed = 0
 		end
 	end)
 end
