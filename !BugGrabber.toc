@@ -11,4 +11,3 @@
 
 BugGrabber.lua
 locales.lua
-
