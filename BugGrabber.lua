@@ -506,7 +506,9 @@ do
 
 		if not swatterDisabled and _G.Swatter and not _G.Swatter.isFake then
 			swatterDisabled = true
-			print(L.ADDON_DISABLED:format("Swatter", "Swatter", "Swatter"))
+			if bugGrabberParentAddon == STANDALONE_NAME then
+				print(L.ADDON_DISABLED:format("Swatter", "Swatter", "Swatter"))
+			end
 			DisableAddOn("!Swatter")
 			SlashCmdList.SWATTER = nil
 			SLASH_SWATTER1, SLASH_SWATTER2 = nil, nil
@@ -555,7 +557,9 @@ do
 		if totalElapsed > 1 then
 			-- Seems like we're getting more errors/sec than we want.
 			if self.count > BUGGRABBER_ERRORS_PER_SEC_BEFORE_THROTTLE then
-				print(L.BUGGRABBER_STOPPED)
+				if bugGrabberParentAddon == STANDALONE_NAME then
+					print(L.BUGGRABBER_STOPPED)
+				end
 				unregisterAddonActionEvents()
 				real_seterrorhandler(function() --[[ noop ]] end)
 				paused = true
