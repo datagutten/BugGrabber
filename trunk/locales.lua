@@ -27,6 +27,8 @@ function addon:LoadTranslations(locale, L)
 --@localization(locale="frFR", format="lua_additive_table", handle-unlocalized="ignore", escape-non-ascii=true)@
 	elseif locale == "esMX" then
 --@localization(locale="esMX", format="lua_additive_table", handle-unlocalized="ignore", escape-non-ascii=true)@
+	elseif locale == "ptBR" then
+--@localization(locale="ptBR", format="lua_additive_table", handle-unlocalized="ignore", escape-non-ascii=true)@
 	end
 end
 
