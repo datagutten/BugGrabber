@@ -381,9 +381,32 @@ function addon:StoreError(errorObject)
 	end
 end
 
-function addon:GetChatLink(errorObject)
-	local tableId = tostring(errorObject):sub(8)
-	return chatLinkFormat:format(playerName, tableId, tableId)
+do
+	local hookCreated = nil
+	local function createChatHook()
+		-- Set up the ItemRef hook that allow us to link bugs.
+		local origHandler = _G.ChatFrame_OnHyperlinkShow
+		_G.ChatFrame_OnHyperlinkShow = function(chatFrame, link, ...)
+			local player, tableId = link:match("^buggrabber:(%a+):(%x+)")
+			if not player or not tableId then return origHandler(chatFrame, link, ...) end
+			if IsModifiedClick("CHATLINK") then
+				ChatEdit_InsertLink(link)
+			else
+				addon:HandleBugLink(player, tableId, link, chatFrame, ...)
+			end
+		end
+		hookCreated = true
+	end
+
+	-- XXX We need to hook the chat frame when anyone requests a chat link from
+	-- XXX us, in case some other addon has hooked :HandleBugLink to process it.
+	-- XXX If not, we could've just created the hook in grabError when we do the
+	-- XXX print.
+	function addon:GetChatLink(errorObject)
+		if not hookCreated then createChatHook() end
+		local tableId = tostring(errorObject):sub(8)
+		return chatLinkFormat:format(playerName, tableId, tableId)
+	end
 end
 
 function addon:GetErrorByPlayerAndID(player, id)
@@ -571,20 +594,6 @@ do
 			totalElapsed = 0
 		end
 	end)
-end
-
-do
-	-- Set up the ItemRef hook that allow us to link bugs.
-	local origHandler = _G.ChatFrame_OnHyperlinkShow
-	_G.ChatFrame_OnHyperlinkShow = function(chatFrame, link, ...)
-		local player, tableId = link:match("^buggrabber:(%a+):(%x+)")
-		if not player or not tableId then return origHandler(chatFrame, link, ...) end
-		if IsModifiedClick("CHATLINK") then
-			ChatEdit_InsertLink(link)
-		else
-			addon:HandleBugLink(player, tableId, link, chatFrame, ...)
-		end
-	end
 end
 
 -- Set up slash command
