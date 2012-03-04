@@ -1,6 +1,6 @@
-﻿## Interface: 40200
+﻿## Interface: 40300
 ## Title: BugGrabber
-## Version: 3.0-alpha
+## Version: 3.0
 ## Notes: Grabs bugs for the bug sack.
 ## Author: Rabbit
 ## X-Credits: Rowne, Ramble, kergoth, ckknight, Fritti
@@ -11,3 +11,4 @@
 
 BugGrabber.lua
 locales.lua
+

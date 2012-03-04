@@ -329,6 +329,11 @@ do
 		else
 			found = fetchFromDatabase(loadErrors, sanitizedMessage)
 		end
+		-- XXX Note that fetchFromDatabase will set the error objects
+		-- XXX session ID to the current one, if found - and it will also
+		-- XXX increment the counter on it. This is probably wrong, it should
+		-- XXX be done here instead, as "fetchFromDatabase" implies a simple
+		-- XXX :Get procedure.
 
 		frame.count = frame.count + 1
 
