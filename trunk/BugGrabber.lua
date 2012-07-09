@@ -77,20 +77,36 @@ local L = {
 -- Locals
 --
 
+-- isGetAddOnMetadataFunctional is a Mists of Pandaria Beta workaround (GetAddOnMetadata doesn't work for "X-" tags)
+local isGetAddOnMetadataFunctional
+if select(4, GetBuildInfo()) >= 50000 then
+	isGetAddOnMetadataFunctional = GetAddOnMetadata("!BugGrabber", "X-Credits")
+else
+	isGetAddOnMetadataFunctional = true
+end
 local frame = CreateFrame("Frame")
 
 -- Should implement :FormatError(errorTable).
 local displayObjectName = nil
-for i = 1, GetNumAddOns() do
-	local meta = GetAddOnMetadata(i, "X-BugGrabber-Display")
-	if meta then
-		local enabled = select(4, GetAddOnInfo(i))
-		if enabled then
-			displayObjectName = meta
-			break
+if isGetAddOnMetadataFunctional then
+	for i = 1, GetNumAddOns() do
+		local meta = GetAddOnMetadata(i, "X-BugGrabber-Display")
+		if meta then
+			local enabled = select(4, GetAddOnInfo(i))
+			if enabled then
+				displayObjectName = meta
+				break
+			end
 		end
 	end
+else
+	-- If we can't search through metadata, then just look for BugSack and use it if its enabled
+	local bugSackEnabled = select(4, GetAddOnInfo("BugSack"))
+	if bugSackEnabled then
+		displayObjectName = "BugSack"
+	end
 end
+
 
 -- Shorthand to BugGrabberDB.errors
 local db = nil
