@@ -178,15 +178,15 @@ local function printErrorObject(err)
 	end
 end
 
--- XXX Disabled until someone complains and demands that they return.
+-- XXX Re-enabled until someone complains and demands that they go away again.
 local function registerAddonActionEvents()
-	--frame:RegisterEvent("ADDON_ACTION_BLOCKED")
-	--frame:RegisterEvent("ADDON_ACTION_FORBIDDEN")
+	frame:RegisterEvent("ADDON_ACTION_BLOCKED")
+	frame:RegisterEvent("ADDON_ACTION_FORBIDDEN")
 end
 
 local function unregisterAddonActionEvents()
-	--frame:UnregisterEvent("ADDON_ACTION_BLOCKED")
-	--frame:UnregisterEvent("ADDON_ACTION_FORBIDDEN")
+	frame:UnregisterEvent("ADDON_ACTION_BLOCKED")
+	frame:UnregisterEvent("ADDON_ACTION_FORBIDDEN")
 end
 
 -----------------------------------------------------------------------
