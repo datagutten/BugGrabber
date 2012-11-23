@@ -139,7 +139,7 @@ local function setupCallbacks()
 		setupCallbacks = nil
 	end
 end
-setupCallbacks()
+addon.setupCallbacks = setupCallbacks; -- make it accessible from the outside for add-ons relying on BugGrabber events so they can make BugGrabber.RegisterCallback appear when they need it (CallbackHandler-1.0 is not embedded in BugGrabber)
 
 local function triggerEvent(...)
 	if not callbacks then setupCallbacks() end
