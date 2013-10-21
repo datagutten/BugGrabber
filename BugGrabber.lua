@@ -192,7 +192,7 @@ end
 -- Error catching
 --
 
-local sanitizeStack, sanitizeLocals, findVersions = nil, nil, nil
+local sanitizeStack, findVersions = nil, nil
 do
 	local function scanObject(o)
 		local version, revision = nil, nil
@@ -288,21 +288,6 @@ do
 		dump = dump:gsub("[`']", "\"")
 		return dump
 	end
-
-	function sanitizeLocals(dump)
-		if not dump then return end
-		dump = dump:gsub("Interface\\", "")
-		dump = dump:gsub("AddOns\\", "")
-		-- Reduce Foo\\Bar-3.0\\Bar-3.0.lua to Foo\\..\\Bar-3.0.lua to save room
-		-- since wow crashes with strings > 983 chars and I don't want to split
-		-- stuff, it's so hacky :/
-		for token in dump:gmatch("\\([^\\]+)%.lua") do
-			dump = dump:gsub(escapeCache[token] .. "\\", "..\\")
-		end
-		dump = dump:gsub("<function> defined", "<func>")
-		dump = dump:gsub("{%s+}", "{}")
-		return dump
-	end
 end
 
 -- Error handler
@@ -351,7 +336,7 @@ do
 			errorObject = {
 				message = sanitizedMessage,
 				stack = table.concat(tmp, "\n"),
-				locals = sanitizeLocals(debuglocals(4)),
+				locals = debuglocals(4),
 				session = addon:GetSessionId(),
 				time = date("%Y/%m/%d %H:%M:%S"),
 				counter = 1,
@@ -360,13 +345,13 @@ do
 			wipe(tmp)
 		end
 
-		addon:StoreError(errorObject)
-
-		triggerEvent("BugGrabber_BugGrabbed", errorObject)
-
 		if not isBugGrabbedRegistered then
 			print(L.ERROR_DETECTED:format(addon:GetChatLink(errorObject)))
 		end
+
+		addon:StoreError(errorObject)
+
+		triggerEvent("BugGrabber_BugGrabbed", errorObject)
 	end
 end
 
