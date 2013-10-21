@@ -2,14 +2,14 @@
 -- $Id$
 --
 -- The BugSack and !BugGrabber team is:
--- Current Developer: Rabbit
+-- Current Developer: Funkydude, Rabbit
 -- Past Developers: Rowne, Ramble, industrial, Fritti, kergoth, ckknight
 -- Testers: Ramble, Sariash
 --
 --[[
 
 !BugGrabber, World of Warcraft addon that catches errors and formats them with a debug stack.
-Copyright (C) 2011 The !BugGrabber Team
+Copyright (C) 2013 The !BugGrabber Team
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -40,7 +40,7 @@ local bugGrabberParentAddon, parentAddonTable = ...
 local STANDALONE_NAME = "!BugGrabber"
 if bugGrabberParentAddon ~= STANDALONE_NAME then
 	for i, handler in next, { STANDALONE_NAME, "!Swatter", "!ImprovedErrorFrame" } do
-		local enabled = select(4, GetAddOnInfo(handler))
+		local _, _, _, enabled = GetAddOnInfo(handler)
 		if enabled then return end -- Bail out
 	end
 end
@@ -77,36 +77,20 @@ local L = {
 -- Locals
 --
 
--- isGetAddOnMetadataFunctional is a Mists of Pandaria Beta workaround (GetAddOnMetadata doesn't work for "X-" tags)
-local isGetAddOnMetadataFunctional
-if select(4, GetBuildInfo()) >= 50000 then
-	isGetAddOnMetadataFunctional = GetAddOnMetadata("!BugGrabber", "X-Credits")
-else
-	isGetAddOnMetadataFunctional = true
-end
 local frame = CreateFrame("Frame")
 
 -- Should implement :FormatError(errorTable).
 local displayObjectName = nil
-if isGetAddOnMetadataFunctional then
-	for i = 1, GetNumAddOns() do
-		local meta = GetAddOnMetadata(i, "X-BugGrabber-Display")
-		if meta then
-			local enabled = select(4, GetAddOnInfo(i))
-			if enabled then
-				displayObjectName = meta
-				break
-			end
+for i = 1, GetNumAddOns() do
+	local meta = GetAddOnMetadata(i, "X-BugGrabber-Display")
+	if meta then
+		local _, _, _, enabled = GetAddOnInfo(i)
+		if enabled then
+			displayObjectName = meta
+			break
 		end
 	end
-else
-	-- If we can't search through metadata, then just look for BugSack and use it if its enabled
-	local bugSackEnabled = select(4, GetAddOnInfo("BugSack"))
-	if bugSackEnabled then
-		displayObjectName = "BugSack"
-	end
 end
-
 
 -- Shorthand to BugGrabberDB.errors
 local db = nil
@@ -178,7 +162,7 @@ local function printErrorObject(err)
 	end
 end
 
--- XXX Re-enabled until someone complains and demands that they go away again.
+-- Re-enabled until someone complains and demands that they go away again.
 local function registerAddonActionEvents()
 	frame:RegisterEvent("ADDON_ACTION_BLOCKED")
 	frame:RegisterEvent("ADDON_ACTION_FORBIDDEN")
@@ -403,28 +387,24 @@ function addon:StoreError(errorObject)
 end
 
 do
-	local hookCreated = nil
 	local function createChatHook()
 		-- Set up the ItemRef hook that allow us to link bugs.
-		local origHandler = _G.ChatFrame_OnHyperlinkShow
-		_G.ChatFrame_OnHyperlinkShow = function(chatFrame, link, ...)
-			local player, tableId = link:match("^buggrabber:(%a+):(%x+)")
-			if not player or not tableId then return origHandler(chatFrame, link, ...) end
-			if IsModifiedClick("CHATLINK") then
-				ChatEdit_InsertLink(link)
+		local SetHyperlink = ItemRefTooltip.SetHyperlink
+		function ItemRefTooltip:SetHyperlink(link, ...)
+			local player, tableId = link:match("^buggrabber:([^:]+):(%x+)")
+			if player then
+				addon:HandleBugLink(player, tableId, link)
 			else
-				addon:HandleBugLink(player, tableId, link, chatFrame, ...)
+				SetHyperlink(self, link, ...)
 			end
 		end
-		hookCreated = true
 	end
 
-	-- XXX We need to hook the chat frame when anyone requests a chat link from
-	-- XXX us, in case some other addon has hooked :HandleBugLink to process it.
-	-- XXX If not, we could've just created the hook in grabError when we do the
-	-- XXX print.
+	-- We need to hook the chat frame when anyone requests a chat link from us,
+	-- in case some other addon has hooked :HandleBugLink to process it. If not,
+	-- we could've just created the hook in grabError when we do the print.
 	function addon:GetChatLink(errorObject)
-		if not hookCreated then createChatHook() end
+		if createChatHook then createChatHook() createChatHook = nil end
 		local tableId = tostring(errorObject):sub(8)
 		return chatLinkFormat:format(playerName, tableId, tableId)
 	end
@@ -505,7 +485,7 @@ local function initDatabase()
 
 	-- Only warn about missing display if we're running standalone.
 	if not displayObjectName and bugGrabberParentAddon == STANDALONE_NAME then
-		local currentInterface = select(4, GetBuildInfo())
+		local _, _, _, currentInterface = GetBuildInfo()
 		if type(currentInterface) ~= "number" then currentInterface = 0 end
 		if not sv.stopnag or sv.stopnag < currentInterface then
 			print(L.NO_DISPLAY_1)
@@ -568,7 +548,7 @@ do
 			end
 			Swatter = nil
 
-			local enabled = select(4, GetAddOnInfo("Stubby"))
+			local _, _, _, enabled = GetAddOnInfo("Stubby")
 			if enabled then createSwatter() end
 
 			real_seterrorhandler(grabError)
