@@ -1,12 +1,10 @@
 ﻿## Interface: 50400
 ## Title: BugGrabber
-## Version: 3.0
 ## Notes: Grabs bugs for the bug sack.
-## Author: Rabbit
+## Author: Funkydude, Rabbit
 ## X-Credits: Rowne, Ramble, kergoth, ckknight, Fritti
 ## X-License: GPL v2 or later.
 ## X-Category: Development Tools
-## X-Email: rabbit.magtheridon@gmail.com
 ## SavedVariables: BugGrabberDB
 
 BugGrabber.lua
