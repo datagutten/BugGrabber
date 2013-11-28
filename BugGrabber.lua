@@ -574,8 +574,13 @@ function frame:PLAYER_LOGIN()
 	if not callbacks then setupCallbacks() end
 	real_seterrorhandler(grabError)
 end
+local badAddons = {}
 function frame:ADDON_ACTION_FORBIDDEN(event, addonName, addonFunc)
-	grabError(L.ADDON_CALL_PROTECTED:format(event, addonName or "<name>", addonFunc or "<func>"))
+	local name = addonName or "<name>"
+	if not badAddons[name] then
+		badAddons[name] = true
+		grabError(L.ADDON_CALL_PROTECTED:format(event, name or "<name>", addonFunc or "<func>"))
+	end
 end
 frame.ADDON_ACTION_BLOCKED = frame.ADDON_ACTION_FORBIDDEN -- XXX Unused?
 frame:SetScript("OnEvent", function(self, event, ...) self[event](self, event, ...) end)
