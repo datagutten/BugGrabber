@@ -362,10 +362,11 @@ do
 			end
 
 			-- Store the error
+			local inCombat = InCombatLockdown() or UnitAffectingCombat("player")
 			errorObject = {
 				message = sanitizedMessage,
 				stack = table.concat(tmp, "\n"),
-				locals = debuglocals(4),
+				locals = inCombat and "" or debuglocals(4),
 				session = addon:GetSessionId(),
 				time = date("%Y/%m/%d %H:%M:%S"),
 				counter = 1,
