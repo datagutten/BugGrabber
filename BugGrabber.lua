@@ -352,7 +352,7 @@ do
 			errorObject = {
 				message = sanitizedMessage,
 				stack = table.concat(tmp, "\n"),
-				locals = inCombat and "" or debuglocals(3),
+				locals = inCombat and "InCombatSkipped" or debuglocals(3),
 				session = addon:GetSessionId(),
 				time = date("%Y/%m/%d %H:%M:%S"),
 				counter = 1,
