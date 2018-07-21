@@ -176,8 +176,12 @@ local function printErrorObject(err)
 	end
 	if not found then
 		print(err.message)
-		print(err.stack)
-		print(err.locals)
+		if err.stack then
+			print(err.stack)
+		end
+		if err.locals then
+			print(err.locals)
+		end
 	end
 end
 
@@ -289,7 +293,7 @@ do
 	local msgsAllowed = BUGGRABBER_ERRORS_PER_SEC_BEFORE_THROTTLE
 	local msgsAllowedLastTime = GetTime()
 	local lastWarningTime = 0
-	function grabError(errorMessage)
+	function grabError(errorMessage, isSimple)
 		-- Flood protection --
 		msgsAllowed = msgsAllowed + (GetTime()-msgsAllowedLastTime)*BUGGRABBER_ERRORS_PER_SEC_BEFORE_THROTTLE
 		msgsAllowedLastTime = GetTime()
@@ -340,25 +344,33 @@ do
 		local errorObject = found
 
 		if not errorObject then
-			local stack = debugstack(3)
-
-			-- Scan for version numbers in the stack
-			for line in stack:gmatch("(.-)\n") do
-				tmp[#tmp+1] = findVersions(line)
-			end
-
 			-- Store the error
-			local inCombat = InCombatLockdown() or UnitAffectingCombat("player")
-			errorObject = {
-				message = sanitizedMessage,
-				stack = table.concat(tmp, "\n"),
-				locals = inCombat and "InCombatSkipped" or debuglocals(3),
-				session = addon:GetSessionId(),
-				time = date("%Y/%m/%d %H:%M:%S"),
-				counter = 1,
-			}
+			if isSimple then
+				errorObject = {
+					message = sanitizedMessage,
+					session = addon:GetSessionId(),
+					time = date("%Y/%m/%d %H:%M:%S"),
+					counter = 1,
+				}
+			else
+				local stack = debugstack(3)
 
-			wipe(tmp)
+				-- Scan for version numbers in the stack
+				for line in stack:gmatch("(.-)\n") do
+					tmp[#tmp+1] = findVersions(line)
+				end
+				local inCombat = InCombatLockdown() or UnitAffectingCombat("player")
+				errorObject = {
+					message = sanitizedMessage,
+					stack = table.concat(tmp, "\n"),
+					locals = inCombat and "InCombatSkipped" or debuglocals(3),
+					session = addon:GetSessionId(),
+					time = date("%Y/%m/%d %H:%M:%S"),
+					counter = 1,
+				}
+
+				wipe(tmp)
+			end
 		end
 
 		if not isBugGrabbedRegistered then
@@ -573,7 +585,7 @@ do
 end
 frame.ADDON_ACTION_BLOCKED = frame.ADDON_ACTION_FORBIDDEN
 function frame:LUA_WARNING(_, _, warningMessage)
-	grabError(warningMessage)
+	grabError(warningMessage, true)
 end
 frame:SetScript("OnEvent", function(self, event, ...) self[event](self, event, ...) end)
 frame:RegisterEvent("ADDON_LOADED")
