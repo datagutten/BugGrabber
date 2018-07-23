@@ -585,6 +585,9 @@ do
 end
 frame.ADDON_ACTION_BLOCKED = frame.ADDON_ACTION_FORBIDDEN
 function frame:LUA_WARNING(_, _, warningMessage)
+	-- Temporary hack for the few dropdown libraries that exist that were designed poorly
+	-- Hopefully we will see a rewrite of dropdowns soon
+	if warningMessage:find("DropDown") then return end
 	grabError(warningMessage, true)
 end
 frame:SetScript("OnEvent", function(self, event, ...) self[event](self, event, ...) end)
