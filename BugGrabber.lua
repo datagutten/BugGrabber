@@ -584,11 +584,11 @@ do
 	end
 end
 frame.ADDON_ACTION_BLOCKED = frame.ADDON_ACTION_FORBIDDEN
-function frame:LUA_WARNING(_, _, warningMessage)
+function frame:LUA_WARNING(_, warnType, warningText)
 	-- Temporary hack for the few dropdown libraries that exist that were designed poorly
 	-- Hopefully we will see a rewrite of dropdowns soon
-	if warningMessage:find("DropDown") then return end
-	grabError(warningMessage, true)
+	if warnType == 0 and warningText:find("DropDown", nil, true) then return end
+	grabError(warningText, true)
 end
 frame:SetScript("OnEvent", function(self, event, ...) self[event](self, event, ...) end)
 frame:RegisterEvent("ADDON_LOADED")
@@ -597,6 +597,7 @@ frame:RegisterEvent("ADDON_ACTION_BLOCKED")
 frame:RegisterEvent("ADDON_ACTION_FORBIDDEN")
 frame:RegisterEvent("LUA_WARNING")
 
+frame.UnregisterEvent = function() end -- Prevent abusive addons
 UIParent:UnregisterEvent("LUA_WARNING")
 real_seterrorhandler(grabError)
 function seterrorhandler() --[[ noop ]] end
